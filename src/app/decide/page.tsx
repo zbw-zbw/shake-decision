@@ -421,19 +421,19 @@ function ShakeInterface({
 
       {shakingPhase === "shaking" ? (
         <>
-          <div className="relative z-10 mb-10">
+          <div className="relative z-10 mb-10 w-[180px] h-[180px] mx-auto overflow-hidden">
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-[200px] h-[200px] rounded-full border-2 border-[rgba(79,70,229,0.3)] animate-pulse-ring" />
+              <div className="w-full h-full rounded-full border-2 border-[rgba(79,70,229,0.3)] animate-pulse-ring" />
             </div>
             <div className="absolute inset-0 flex items-center justify-center">
               <div
-                className="w-[200px] h-[200px] rounded-full border-2 border-[rgba(79,70,229,0.3)] animate-pulse-ring"
+                className="w-full h-full rounded-full border-2 border-[rgba(79,70,229,0.3)] animate-pulse-ring"
                 style={{ animationDelay: "0.6s" }}
               />
             </div>
             <div className="absolute inset-0 flex items-center justify-center">
               <div
-                className="w-[200px] h-[200px] rounded-full border-2 border-[rgba(79,70,229,0.3)] animate-pulse-ring"
+                className="w-full h-full rounded-full border-2 border-[rgba(79,70,229,0.3)] animate-pulse-ring"
                 style={{ animationDelay: "1.2s" }}
               />
             </div>
@@ -444,7 +444,7 @@ function ShakeInterface({
               onMouseLeave={handleMouseUp}
               onTouchStart={(e) => { e.preventDefault(); handleMouseDown(); }}
               onTouchEnd={handleMouseUp}
-              className="relative w-[200px] h-[200px] rounded-full flex flex-col items-center justify-center text-white transition-all duration-150 select-none outline-none cursor-pointer"
+              className="relative w-[160px] h-[160px] rounded-full flex flex-col items-center justify-center text-white transition-all duration-150 select-none outline-none cursor-pointer"
               style={{
                 background: intensity > 0
                   ? `linear-gradient(135deg, ${circleColor}, #7c3aed)`
@@ -457,13 +457,13 @@ function ShakeInterface({
             >
               {intensity > 0 ? (
                 <>
-                  <span className="text-4xl font-bold">{intensity}%</span>
-                  <span className="text-lg mt-1"><TangleIcon level={tangleInfo.level} className="w-5 h-5" /></span>
+                  <span className="text-3xl font-bold">{intensity}%</span>
+                  <span className="text-sm mt-1"><TangleIcon level={tangleInfo.level} className="w-4 h-4" /></span>
                 </>
               ) : (
                 <>
-                  <Smartphone className="w-10 h-10 mb-2" />
-                  <span className="text-sm font-medium">
+                  <Smartphone className="w-8 h-8 mb-1" />
+                  <span className="text-xs font-medium">
                     {shake.isClickMode || shake.permissionState === "unsupported"
                       ? "疯狂点击！"
                       : "摇一摇手机"}

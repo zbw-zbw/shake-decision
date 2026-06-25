@@ -70,10 +70,12 @@ export function useShakeDetection(): ShakeResult {
   }, []);
 
   const calculateIntensity = useCallback((deltaSum: number): number => {
-    // Map deltaSum (typical range 0-50) to 0-100
-    const raw = Math.min((deltaSum / 35) * 100, 100);
+    // Map deltaSum (typical range 0-15) to 0-100
+    const raw = Math.min((deltaSum / 12) * 100, 100);
+    // Apply exponential curve for better feel
+    const curved = Math.pow(raw / 100, 0.7) * 100;
     // Smooth with sliding window
-    intensityWindowRef.current.push(raw);
+    intensityWindowRef.current.push(curved);
     if (intensityWindowRef.current.length > 10) {
       intensityWindowRef.current.shift();
     }
@@ -99,9 +101,8 @@ export function useShakeDetection(): ShakeResult {
       const now = Date.now();
       const timeSinceLastShake = now - lastShakeTimeRef.current;
 
-      // Threshold: ~15-20 m/s² deviation from gravity (~9.8)
-      // Using a simpler approach: detect significant change
-      if (magnitude > 20 && timeSinceLastShake > 150) {
+      // Threshold: 13 m/s² catches moderate shakes on most phones
+      if (magnitude > 13 && timeSinceLastShake > 150) {
         lastShakeTimeRef.current = now;
         shakeCountRef.current += 1;
         setShakeCount(shakeCountRef.current);
