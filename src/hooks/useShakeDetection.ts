@@ -154,14 +154,23 @@ export function useShakeDetection(): ShakeResult {
   }, []);
 
   const startListening = useCallback(() => {
-    if (isClickMode) return;
+    // Always try to start listening — if DeviceMotion isn't available,
+    // the event listener simply won't fire
     listeningRef.current = true;
-    window.addEventListener("devicemotion", handleMotion);
-  }, [isClickMode, handleMotion]);
+    try {
+      window.addEventListener("devicemotion", handleMotion, { passive: true });
+    } catch {
+      // Silently fail — click mode is always available
+    }
+  }, [handleMotion]);
 
   const stopListening = useCallback(() => {
     listeningRef.current = false;
-    window.removeEventListener("devicemotion", handleMotion);
+    try {
+      window.removeEventListener("devicemotion", handleMotion);
+    } catch {
+      // ignore
+    }
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     intensityWindowRef.current = [];
   }, [handleMotion]);

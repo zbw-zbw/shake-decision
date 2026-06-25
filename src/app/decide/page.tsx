@@ -150,7 +150,7 @@ function DecisionInputForm({
   const isDisabled = !dilemma.trim() || !optionA.trim() || !optionB.trim() || dilemma.trim().length < 5;
 
   return (
-    <div className="w-full max-w-[520px] mx-auto px-4 overflow-x-hidden">
+    <div className="w-full max-w-[520px] mx-auto px-4">
       <div className="bg-[rgba(255,255,255,0.06)] backdrop-blur-sm border border-[rgba(255,255,255,0.08)] rounded-2xl overflow-hidden animate-fade-in-up">
         <div
           className="h-[3px] w-full"
@@ -402,7 +402,7 @@ function ShakeInterface({
   const circleColor = getIntensityColor(intensity);
 
   return (
-    <div className="relative w-full min-h-screen flex flex-col items-center justify-center px-4 overflow-x-hidden">
+    <div className="relative w-full min-h-screen flex flex-col items-center justify-center px-4">
       <div
         className="fixed inset-0 pointer-events-none transition-opacity duration-500"
         style={{
@@ -421,17 +421,17 @@ function ShakeInterface({
 
       {shakingPhase === "shaking" ? (
         <>
-          <div className="relative z-10 mb-10 w-[180px] h-[180px] mx-auto overflow-hidden">
-            <div className="absolute inset-0 flex items-center justify-center">
+          <div className="relative z-10 mb-10 w-[160px] h-[160px] mx-auto">
+            <div className="absolute inset-[-50%] flex items-center justify-center pointer-events-none">
               <div className="w-full h-full rounded-full border-2 border-[rgba(79,70,229,0.3)] animate-pulse-ring" />
             </div>
-            <div className="absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-[-50%] flex items-center justify-center pointer-events-none">
               <div
                 className="w-full h-full rounded-full border-2 border-[rgba(79,70,229,0.3)] animate-pulse-ring"
                 style={{ animationDelay: "0.6s" }}
               />
             </div>
-            <div className="absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-[-50%] flex items-center justify-center pointer-events-none">
               <div
                 className="w-full h-full rounded-full border-2 border-[rgba(79,70,229,0.3)] animate-pulse-ring"
                 style={{ animationDelay: "1.2s" }}
@@ -551,7 +551,7 @@ function AnalyzingPhase() {
   }, []);
 
   return (
-    <div className="relative w-full min-h-screen flex flex-col items-center justify-center px-4 overflow-x-hidden">
+    <div className="relative w-full min-h-screen flex flex-col items-center justify-center px-4">
       <div
         className="fixed inset-0 pointer-events-none"
         style={{
@@ -663,7 +663,7 @@ function ResultPhase({
   const confColor = getConfidenceColor(result.confidence);
 
   return (
-    <div className="relative w-full min-h-screen flex flex-col items-center justify-center px-4 py-20 overflow-x-hidden">
+    <div className="relative w-full min-h-screen flex flex-col items-center justify-center px-4 py-20">
 
       <div className="w-full max-w-[560px] mx-auto animate-fade-in-up">
         <div className="bg-[rgba(255,255,255,0.06)] backdrop-blur-sm border border-[rgba(255,255,255,0.08)] rounded-2xl overflow-hidden">
