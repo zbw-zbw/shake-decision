@@ -12,6 +12,7 @@ import {
 } from "@/lib/storage";
 import { DecisionRecord, DecisionStats } from "@/types/decision";
 import { useToast } from "@/components/Toast";
+import { Inbox, BarChart3, Activity, Target, Smile, Lightbulb, Smartphone } from "lucide-react";
 
 // ─── Helpers ───
 const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
@@ -34,11 +35,11 @@ function getDateKey(ts: number): string {
   return new Date(ts).toISOString().slice(0, 10);
 }
 
-function getTangleEmoji(level: string): string {
-  if (level === "light") return "💚";
-  if (level === "medium") return "🟡";
-  if (level === "heavy") return "🟠";
-  return "🔴";
+function getTangleDotColor(level: string): string {
+  if (level === "light") return "#34d399";
+  if (level === "medium") return "#fbbf24";
+  if (level === "heavy") return "#fb923c";
+  return "#f472b6";
 }
 
 function getIntensityColor(intensity: number): string {
@@ -48,7 +49,7 @@ function getIntensityColor(intensity: number): string {
   return "#f472b6";
 }
 
-const SATISFACTION_EMOJIS = ["😢", "😕", "😐", "🙂", "😄"];
+const SATISFACTION_LABELS = ["1分", "2分", "3分", "4分", "5分"];
 
 // ─── Stats Panel ───
 function StatsPanel({ stats }: { stats: DecisionStats }) {
@@ -61,25 +62,25 @@ function StatsPanel({ stats }: { stats: DecisionStats }) {
 
   const items = [
     {
-      icon: "📊",
+      Icon: BarChart3,
       label: "总决策",
       value: `${stats.totalDecisions} 次`,
       color: "#fbbf24",
     },
     {
-      icon: "💪",
+      Icon: Activity,
       label: "平均力度",
       value: `${stats.avgShakeIntensity}%`,
       color: getIntensityColor(stats.avgShakeIntensity),
     },
     {
-      icon: "🎯",
+      Icon: Target,
       label: "平均置信度",
       value: `${stats.avgConfidence}%`,
       color: "#818cf8",
     },
     {
-      icon: "😊",
+      Icon: Smile,
       label: "满意率",
       value: stats.totalRated > 0 ? `${satisfactionRate}%` : "-",
       color: "#34d399",
@@ -92,7 +93,9 @@ function StatsPanel({ stats }: { stats: DecisionStats }) {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {items.map((item) => (
             <div key={item.label} className="text-center">
-              <div className="text-2xl mb-1">{item.icon}</div>
+              <div className="flex justify-center mb-1">
+                <item.Icon className="w-6 h-6" style={{ color: item.color }} />
+              </div>
               <div className="text-xl sm:text-2xl font-bold" style={{ color: item.color }}>
                 {item.value}
               </div>
@@ -109,14 +112,14 @@ function StatsPanel({ stats }: { stats: DecisionStats }) {
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-20 animate-fade-in-up">
-      <div className="text-6xl mb-6">📭</div>
+      <Inbox className="w-16 h-16 text-[rgba(255,255,255,0.3)] mb-6" />
       <h2 className="text-xl font-bold text-white mb-2">还没有决策记录</h2>
       <p className="text-[rgba(255,255,255,0.5)] text-sm mb-8">
         去摇一摇，让AI帮你做个决定吧！
       </p>
       <Link
         href="/decide"
-        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-medium hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300"
+        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-medium hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer"
       >
         <span>开始决策</span>
         <span>→</span>
@@ -136,23 +139,23 @@ function DeleteConfirmPanel({
   return (
     <>
       <div
-        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm cursor-pointer"
         onClick={onCancel}
       />
       <div className="fixed bottom-0 left-0 right-0 z-50 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-w-sm sm:rounded-2xl animate-slide-up">
-        <div className="bg-[#1a1530] border-t sm:border border-[rgba(255,255,255,0.1)] rounded-t-2xl sm:rounded-2xl p-6">
+        <div className="bg-[#1a1530] sm:border border-[rgba(255,255,255,0.1)] rounded-t-2xl sm:rounded-2xl p-6">
           <h3 className="text-white font-semibold text-base mb-2">确定删除这条决策记录吗？</h3>
           <p className="text-[rgba(255,255,255,0.5)] text-sm mb-6">删除后无法恢复</p>
           <div className="flex gap-3">
             <button
               onClick={onCancel}
-              className="flex-1 py-2.5 rounded-xl border border-[rgba(255,255,255,0.15)] text-white text-sm font-medium hover:bg-[rgba(255,255,255,0.06)] transition-all"
+              className="flex-1 py-2.5 rounded-xl border border-[rgba(255,255,255,0.15)] text-white text-sm font-medium hover:bg-[rgba(255,255,255,0.06)] transition-all cursor-pointer"
             >
               取消
             </button>
             <button
               onClick={onConfirm}
-              className="flex-1 py-2.5 rounded-xl bg-[rgba(244,114,182,0.2)] border border-[rgba(244,114,182,0.3)] text-[#f472b6] text-sm font-medium hover:bg-[rgba(244,114,182,0.3)] transition-all"
+              className="flex-1 py-2.5 rounded-xl bg-[rgba(244,114,182,0.2)] border border-[rgba(244,114,182,0.3)] text-[#f472b6] text-sm font-medium hover:bg-[rgba(244,114,182,0.3)] transition-all cursor-pointer"
             >
               删除
             </button>
@@ -221,14 +224,18 @@ function DecisionCard({ record }: { record: DecisionRecord }) {
             <span className="text-[rgba(255,255,255,0.3)]">·</span>
             <span className="text-[rgba(255,255,255,0.6)]">置信度 {result.confidence}%</span>
             <span className="text-[rgba(255,255,255,0.3)]">·</span>
-            <span className="text-[rgba(255,255,255,0.6)]">
-              力度 {input.shakeIntensity}% {getTangleEmoji(input.tangleLevel)}
+            <span className="text-[rgba(255,255,255,0.6)] flex items-center gap-1">
+              力度 {input.shakeIntensity}%
+              <span
+                className="inline-block w-2.5 h-2.5 rounded-full"
+                style={{ backgroundColor: getTangleDotColor(input.tangleLevel) }}
+              />
             </span>
           </div>
 
           {/* Insight */}
           <div className="flex items-start gap-2 mb-3">
-            <span className="text-sm shrink-0">💡</span>
+            <Lightbulb className="w-4 h-4 text-[rgba(255,255,255,0.5)] shrink-0 mt-0.5" />
             <p className="text-[rgba(255,255,255,0.6)] text-sm italic leading-relaxed">
               {result.insight}
             </p>
@@ -241,21 +248,21 @@ function DecisionCard({ record }: { record: DecisionRecord }) {
                 <span className="text-xs text-[rgba(255,255,255,0.5)]">这个决定让你满意吗？</span>
               </div>
               <div className="flex items-center gap-1">
-                {SATISFACTION_EMOJIS.map((emoji, i) => {
+                {SATISFACTION_LABELS.map((label, i) => {
                   const score = i + 1;
                   const isSelected = satisfaction === score;
                   return (
                     <button
                       key={i}
                       onClick={() => handleRate(score)}
-                      className={`text-xl sm:text-lg transition-all duration-200 p-1 rounded-lg ${
+                      className={`text-xs font-medium transition-all duration-200 px-2 py-1 rounded-lg cursor-pointer ${
                         isSelected
-                          ? "bg-[rgba(255,255,255,0.1)] scale-110"
-                          : "hover:bg-[rgba(255,255,255,0.05)] hover:scale-105"
+                          ? "bg-[rgba(255,255,255,0.1)] scale-110 text-white"
+                          : "hover:bg-[rgba(255,255,255,0.05)] hover:scale-105 text-[rgba(255,255,255,0.5)]"
                       }`}
                       title={`${score}分`}
                     >
-                      {emoji}
+                      {label}
                     </button>
                   );
                 })}
@@ -264,23 +271,23 @@ function DecisionCard({ record }: { record: DecisionRecord }) {
           ) : (
             <div className="mb-3">
               <p className="text-xs text-[rgba(255,255,255,0.35)]">
-                ⏳ 24小时后可以回来评价这个决定
+                24小时后可以回来评价这个决定
               </p>
             </div>
           )}
 
           {/* Actions */}
-          <div className="flex items-center justify-between pt-2 border-t border-[rgba(255,255,255,0.06)]">
+          <div className="flex items-center justify-between pt-2">
             <button
               onClick={() => setExpanded(!expanded)}
-              className="text-xs text-[rgba(255,255,255,0.5)] hover:text-white transition-colors flex items-center gap-1"
+              className="text-xs text-[rgba(255,255,255,0.5)] hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
             >
               <span>{expanded ? "收起详情" : "查看详情"}</span>
               <span className={`transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}>▾</span>
             </button>
             <button
               onClick={() => setDeleteConfirm(true)}
-              className="text-xs text-[rgba(255,255,255,0.35)] hover:text-[#f472b6] transition-colors"
+              className="text-xs text-[rgba(255,255,255,0.35)] hover:text-[#f472b6] transition-colors cursor-pointer"
             >
               删除
             </button>
@@ -293,7 +300,7 @@ function DecisionCard({ record }: { record: DecisionRecord }) {
             expanded ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
           }`}
         >
-          <div className="px-4 sm:px-5 pb-5 pt-1 border-t border-[rgba(255,255,255,0.06)]">
+          <div className="px-4 sm:px-5 pb-5 pt-1">
             {/* Root causes */}
             <div className="mb-4">
               <h4 className="text-xs font-semibold text-[rgba(255,255,255,0.5)] uppercase tracking-wider mb-2">
@@ -335,8 +342,9 @@ function DecisionCard({ record }: { record: DecisionRecord }) {
               <h4 className="text-xs font-semibold text-[rgba(255,255,255,0.5)] uppercase tracking-wider mb-2">
                 摇晃解读
               </h4>
-              <p className="text-sm text-[rgba(255,255,255,0.65)] leading-relaxed">
-                📱 {result.tangleAnalysis}
+              <p className="text-sm text-[rgba(255,255,255,0.65)] leading-relaxed flex items-start gap-1">
+                <Smartphone className="w-4 h-4 text-[rgba(255,255,255,0.5)] shrink-0 mt-0.5" />
+                <span>{result.tangleAnalysis}</span>
               </p>
             </div>
           </div>
@@ -410,7 +418,7 @@ export default function HistoryPage() {
         <div className="max-w-[640px] mx-auto mb-6 flex justify-end">
           <button
             onClick={() => setClearConfirm(true)}
-            className="text-xs text-[rgba(255,255,255,0.35)] hover:text-[#f472b6] transition-colors"
+            className="text-xs text-[rgba(255,255,255,0.35)] hover:text-[#f472b6] transition-colors cursor-pointer"
           >
             清空所有记录
           </button>
@@ -448,7 +456,7 @@ export default function HistoryPage() {
       )}
 
       {/* Footer */}
-      <div className="max-w-[640px] mx-auto mt-12 pt-6 border-t border-[rgba(255,255,255,0.06)] text-center safe-bottom">
+      <div className="max-w-[640px] mx-auto mt-12 pt-6 text-center safe-bottom">
         <p className="text-xs text-[rgba(255,255,255,0.25)] mb-0.5">
           摇一摇决策器 · TRAE AI 创造力大赛 · 硬件交互赛道
         </p>

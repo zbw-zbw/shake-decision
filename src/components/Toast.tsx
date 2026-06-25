@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, createContext, useContext, useRef } from "react";
+import { Check, X, Info } from "lucide-react";
 
 type ToastType = "success" | "error" | "info";
 
@@ -75,10 +76,15 @@ const typeStyles: Record<ToastType, string> = {
   info: "bg-[rgba(79,70,229,0.15)] border-[rgba(79,70,229,0.3)] text-[#818cf8]",
 };
 
-const typeIcons: Record<ToastType, string> = {
-  success: "✓",
-  error: "✕",
-  info: "ℹ",
+const TypeIcon = ({ type }: { type: ToastType }) => {
+  switch (type) {
+    case "success":
+      return <Check className="w-4 h-4 shrink-0" />;
+    case "error":
+      return <X className="w-4 h-4 shrink-0" />;
+    case "info":
+      return <Info className="w-4 h-4 shrink-0" />;
+  }
 };
 
 function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
@@ -88,7 +94,7 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
       onClick={onClose}
       role="alert"
     >
-      <span className="text-base shrink-0">{typeIcons[toast.type]}</span>
+      <TypeIcon type={toast.type} />
       <span className="flex-1">{toast.message}</span>
     </div>
   );

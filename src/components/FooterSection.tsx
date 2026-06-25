@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Smartphone } from "lucide-react";
 
 export function FooterSection() {
   return (
@@ -15,14 +16,14 @@ export function FooterSection() {
           </p>
           <Link
             href="/decide"
-            className="fade-in inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-semibold text-lg hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200"
+            className="fade-in inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-semibold text-lg hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 cursor-pointer"
           >
-            <span>📱</span>
+            <Smartphone className="w-5 h-5" />
             <span>开始决策</span>
           </Link>
         </div>
 
-        <div className="mt-16 pt-8 border-t border-[rgba(255,255,255,0.06)] text-center">
+        <div className="mt-16 pt-8 text-center">
           <p className="text-xs text-[rgba(255,255,255,0.35)] mb-1">
             摇一摇决策器 · TRAE AI 创造力大赛 · 硬件交互赛道
           </p>

@@ -1,5 +1,7 @@
 "use client";
 
+import { Circle } from "lucide-react";
+
 const scenes = [
   {
     tag: "日常决策",
@@ -10,7 +12,6 @@ const scenes = [
       "你今天有重要会议，黑色更有气场。但你摇的力度很轻（23%），说明你其实不太纠结，只是需要有人替你说出答案。",
     level: 23,
     levelLabel: "轻度纠结",
-    levelEmoji: "💚",
     bars: 2,
   },
   {
@@ -19,10 +20,9 @@ const scenes = [
     tagBg: "rgba(56,189,248,0.15)",
     question: "买iPhone还是安卓旗舰？",
     analysis:
-      "你的描述中3次提到\"性价比\"，说明预算是核心考量。你纠结的不是哪个更好，而是想买贵的但觉得不应该。建议：买你真正想要的，纠结的时间成本比差价更贵。",
+      '你的描述中3次提到"性价比"，说明预算是核心考量。你纠结的不是哪个更好，而是想买贵的但觉得不应该。建议：买你真正想要的，纠结的时间成本比差价更贵。',
     level: 60,
     levelLabel: "中度纠结",
-    levelEmoji: "🟡",
     bars: 6,
   },
   {
@@ -31,10 +31,9 @@ const scenes = [
     tagBg: "rgba(244,114,182,0.15)",
     question: "留在大城市还是回老家？",
     analysis:
-      "这个问题的摇晃力度达到95%——你真的很纠结。但注意：你没有提到\"想回老家\"，你说的是\"该不该回\"。\"想\"和\"该\"是两件事。建议你先分清这两者。",
+      '这个问题的摇晃力度达到95%——你真的很纠结。但注意：你没有提到"想回老家"，你说的是"该不该回"。"想"和"该"是两件事。建议你先分清这两者。',
     level: 95,
     levelLabel: "极度纠结",
-    levelEmoji: "🔴",
     bars: 9,
   },
 ];
@@ -60,8 +59,9 @@ function ProgressBar({ level, bars }: { level: number; bars: number }) {
         ))}
       </div>
       <span className="text-xs text-[rgba(255,255,255,0.5)]">{level}%</span>
-      <span className="text-xs">
-        {level <= 30 ? "💚" : level <= 70 ? "🟡" : "🔴"} {level <= 30 ? "轻度纠结" : level <= 70 ? "中度纠结" : "极度纠结"}
+      <span className="text-xs flex items-center gap-1">
+        <span className={`w-2.5 h-2.5 rounded-full inline-block ${level <= 30 ? "bg-[#34d399]" : level <= 70 ? "bg-[#fbbf24]" : "bg-[#f472b6]"}`} />
+        {level <= 30 ? "轻度纠结" : level <= 70 ? "中度纠结" : "极度纠结"}
       </span>
     </div>
   );
@@ -100,7 +100,7 @@ export function ScenesSection() {
               <p className="text-[rgba(255,255,255,0.7)] text-sm leading-relaxed mb-6">
                 {scene.analysis}
               </p>
-              <div className="pt-4 border-t border-[rgba(255,255,255,0.06)]">
+              <div className="pt-4">
                 <ProgressBar level={scene.level} bars={scene.bars} />
               </div>
             </div>

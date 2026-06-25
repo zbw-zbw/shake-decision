@@ -10,6 +10,11 @@ import {
 import { AnalysisResult } from "@/types/decision";
 import { saveDecision } from "@/lib/storage";
 import { useToast } from "@/components/Toast";
+import {
+  Smartphone, ArrowLeft, Sparkles, Save, RotateCcw, Link2,
+  Check, Clock, Lightbulb, Search, BarChart3, Zap, CheckCircle2,
+  MessageSquare, Flame, ArrowRight, Target
+} from "lucide-react";
 
 // ─── Types ───
 type Phase = "input" | "shaking" | "analyzing" | "result";
@@ -17,21 +22,21 @@ type Phase = "input" | "shaking" | "analyzing" | "result";
 // ─── Quick Templates ───
 const templates = [
   {
-    emoji: "🍜",
+    icon: "utensils",
     label: "今天吃什么",
     dilemma: "中午吃什么好纠结",
     optionA: "外卖",
     optionB: "食堂",
   },
   {
-    emoji: "🛍️",
+    icon: "shopping",
     label: "买还是不买",
     dilemma: "要不要买这个东西",
     optionA: "买",
     optionB: "不买",
   },
   {
-    emoji: "🏠",
+    icon: "home",
     label: "出门还是宅家",
     dilemma: "周末出门还是宅家",
     optionA: "出门浪",
@@ -48,10 +53,19 @@ const loadingMessages = [
 
 // ─── Helpers ───
 function getTangleInfo(intensity: number) {
-  if (intensity <= 30) return { level: "light" as TangleLevel, emoji: "💚", label: "轻度纠结" };
-  if (intensity <= 60) return { level: "medium" as TangleLevel, emoji: "🟡", label: "中度纠结" };
-  if (intensity <= 85) return { level: "heavy" as TangleLevel, emoji: "🟠", label: "重度纠结" };
-  return { level: "extreme" as TangleLevel, emoji: "🔴", label: "极度纠结" };
+  if (intensity <= 30) return { level: "light" as TangleLevel, label: "轻度纠结" };
+  if (intensity <= 60) return { level: "medium" as TangleLevel, label: "中度纠结" };
+  if (intensity <= 85) return { level: "heavy" as TangleLevel, label: "重度纠结" };
+  return { level: "extreme" as TangleLevel, label: "极度纠结" };
+}
+
+function TangleIcon({ level, className }: { level: TangleLevel; className?: string }) {
+  switch (level) {
+    case "light": return <CheckCircle2 className={className || "w-4 h-4 text-[#34d399]"} />;
+    case "medium": return <Clock className={className || "w-4 h-4 text-[#fbbf24]"} />;
+    case "heavy": return <Flame className={className || "w-4 h-4 text-[#fb923c]"} />;
+    case "extreme": return <Zap className={className || "w-4 h-4 text-[#f472b6]"} />;
+  }
 }
 
 function getIntensityColor(intensity: number): string {
@@ -81,12 +95,13 @@ function HttpsBanner() {
   if (!visible) return null;
   return (
     <div className="fixed top-16 left-0 right-0 z-40 bg-[rgba(251,191,36,0.15)] border-b border-[rgba(251,191,36,0.3)] backdrop-blur-md px-4 py-3 flex items-center justify-between">
-      <p className="text-sm text-[#fbbf24]">
-        📱 陀螺仪需要 HTTPS 环境。当前使用点击模式代替，部署到 Vercel 后即可体验完整摇一摇功能。
+      <p className="text-sm text-[#fbbf24] flex items-center gap-1.5">
+        <Smartphone className="w-4 h-4" />
+        <span>陀螺仪需要 HTTPS 环境。当前使用点击模式代替，部署到 Vercel 后即可体验完整摇一摇功能。</span>
       </p>
       <button
         onClick={() => setVisible(false)}
-        className="text-[#fbbf24] hover:text-white text-lg leading-none shrink-0 ml-4"
+        className="text-[#fbbf24] hover:text-white text-lg leading-none shrink-0 ml-4 cursor-pointer"
         aria-label="关闭提示"
       >
         ×
@@ -160,7 +175,7 @@ function DecisionInputForm({
                 }}
                 placeholder="比如：中午吃火锅还是日料、这个offer要不要接..."
                 rows={3}
-                className={`w-full bg-[rgba(255,255,255,0.04)] border rounded-xl px-4 py-3 text-white placeholder-[rgba(255,255,255,0.25)] text-sm resize-none outline-none transition-all duration-200 focus:border-[#4f46e5] focus:shadow-[0_0_0_3px_rgba(79,70,229,0.2)] ${
+                className={`w-full bg-[rgba(255,255,255,0.04)] border rounded-xl px-4 py-3 text-white placeholder-[rgba(255,255,255,0.25)] text-sm resize-none outline-none transition-all duration-200 focus:border-[#4f46e5] focus:shadow-[0_0_0_3px_rgba(79,70,229,0.2)] cursor-pointer ${
                   errors.dilemma ? "border-red-400" : "border-[rgba(255,255,255,0.08)]"
                 }`}
               />
@@ -189,7 +204,7 @@ function DecisionInputForm({
                     if (errors.optionA) setErrors((p) => ({ ...p, optionA: undefined }));
                   }}
                   placeholder="选项A：火锅"
-                  className={`w-full bg-[rgba(255,255,255,0.04)] border rounded-xl pl-4 pr-3 py-2.5 text-white placeholder-[rgba(255,255,255,0.25)] text-sm outline-none transition-all duration-200 focus:border-[#4f46e5] focus:shadow-[0_0_0_3px_rgba(79,70,229,0.2)] ${
+                  className={`w-full bg-[rgba(255,255,255,0.04)] border rounded-xl pl-4 pr-3 py-2.5 text-white placeholder-[rgba(255,255,255,0.25)] text-sm outline-none transition-all duration-200 focus:border-[#4f46e5] focus:shadow-[0_0_0_3px_rgba(79,70,229,0.2)] cursor-pointer ${
                     errors.optionA ? "border-red-400" : "border-[rgba(255,255,255,0.08)]"
                   }`}
                 />
@@ -213,7 +228,7 @@ function DecisionInputForm({
                     if (errors.optionB) setErrors((p) => ({ ...p, optionB: undefined }));
                   }}
                   placeholder="选项B：日料"
-                  className={`w-full bg-[rgba(255,255,255,0.04)] border rounded-xl pl-4 pr-3 py-2.5 text-white placeholder-[rgba(255,255,255,0.25)] text-sm outline-none transition-all duration-200 focus:border-[#4f46e5] focus:shadow-[0_0_0_3px_rgba(79,70,229,0.2)] ${
+                  className={`w-full bg-[rgba(255,255,255,0.04)] border rounded-xl pl-4 pr-3 py-2.5 text-white placeholder-[rgba(255,255,255,0.25)] text-sm outline-none transition-all duration-200 focus:border-[#4f46e5] focus:shadow-[0_0_0_3px_rgba(79,70,229,0.2)] cursor-pointer ${
                     errors.optionB ? "border-red-400" : "border-[rgba(255,255,255,0.08)]"
                   }`}
                 />
@@ -233,13 +248,12 @@ function DecisionInputForm({
                 <button
                   key={t.label}
                   onClick={() => applyTemplate(t)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-300 ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-300 cursor-pointer ${
                     flashField === "template"
                       ? "bg-[rgba(79,70,229,0.25)] border-[rgba(79,70,229,0.5)] text-white scale-105"
                       : "bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.7)] hover:bg-[rgba(255,255,255,0.10)] hover:border-[rgba(255,255,255,0.15)]"
                   }`}
                 >
-                  <span>{t.emoji}</span>
                   <span>{t.label}</span>
                 </button>
               ))}
@@ -249,20 +263,21 @@ function DecisionInputForm({
           <button
             onClick={handleSubmit}
             disabled={isDisabled}
-            className={`w-full py-4 px-8 rounded-xl text-white font-semibold text-base flex items-center justify-center gap-2 transition-all duration-300 ${
+            className={`w-full py-4 px-8 rounded-xl text-white font-semibold text-base flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer ${
               isDisabled
                 ? "bg-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.3)] cursor-not-allowed"
                 : "bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
             }`}
           >
             <span>准备好了，摇一摇！</span>
-            <span>📱</span>
+            <Smartphone className="w-5 h-5" />
           </button>
         </div>
       </div>
       <div className="text-center mt-6">
-        <Link href="/" className="text-sm text-[rgba(255,255,255,0.5)] hover:text-white transition-colors">
-          ← 返回首页
+        <Link href="/" className="text-sm text-[rgba(255,255,255,0.5)] hover:text-white transition-colors cursor-pointer inline-flex items-center gap-1">
+          <ArrowLeft className="w-4 h-4" />
+          <span>返回首页</span>
         </Link>
       </div>
     </div>
@@ -380,9 +395,9 @@ function ShakeInterface({
       />
       <Link
         href="/"
-        className="fixed top-20 left-4 sm:left-8 z-30 text-sm text-[rgba(255,255,255,0.5)] hover:text-white transition-colors flex items-center gap-1"
+        className="fixed top-20 left-4 sm:left-8 z-30 text-sm text-[rgba(255,255,255,0.5)] hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
       >
-        <span>←</span>
+        <ArrowLeft className="w-4 h-4" />
         <span>返回</span>
       </Link>
       <div className="relative z-10 text-center mb-8 max-w-md">
@@ -419,7 +434,7 @@ function ShakeInterface({
               onMouseLeave={handleMouseUp}
               onTouchStart={(e) => { e.preventDefault(); handleMouseDown(); }}
               onTouchEnd={handleMouseUp}
-              className="relative w-[200px] h-[200px] rounded-full flex flex-col items-center justify-center text-white transition-all duration-150 select-none outline-none"
+              className="relative w-[200px] h-[200px] rounded-full flex flex-col items-center justify-center text-white transition-all duration-150 select-none outline-none cursor-pointer"
               style={{
                 background: intensity > 0
                   ? `linear-gradient(135deg, ${circleColor}, #7c3aed)`
@@ -433,11 +448,11 @@ function ShakeInterface({
               {intensity > 0 ? (
                 <>
                   <span className="text-4xl font-bold">{intensity}%</span>
-                  <span className="text-lg mt-1">{tangleInfo.emoji}</span>
+                  <span className="text-lg mt-1"><TangleIcon level={tangleInfo.level} className="w-5 h-5" /></span>
                 </>
               ) : (
                 <>
-                  <span className="text-5xl mb-2">📱</span>
+                  <Smartphone className="w-10 h-10 mb-2" />
                   <span className="text-sm font-medium">
                     {shake.isClickMode || shake.permissionState === "unsupported"
                       ? "疯狂点击！"
@@ -468,40 +483,44 @@ function ShakeInterface({
             </div>
           </div>
           <div className="relative z-10 text-center">
-            <p className="text-sm text-[rgba(255,255,255,0.6)]">
-              已摇 <span key={count} className="text-white font-bold text-lg inline-block animate-bounce-count">{count}</span> 次
+            <p className="text-sm text-[rgba(255,255,255,0.6)] mb-3">
+              已摇 <span key={count} className="text-white font-bold text-lg inline-block animate-bounce-count">{count}</span> 次，再摇几下或点击停止
             </p>
-            {count > 0 && count < 3 && (
-              <p className="text-xs text-[#fbbf24] mt-2">再使劲摇几下！至少摇3次哦</p>
-            )}
+            <button
+              onClick={() => setShakingPhase("finished")}
+              className="px-5 py-2 rounded-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.12)] text-sm text-[rgba(255,255,255,0.7)] hover:bg-[rgba(255,255,255,0.12)] hover:text-white transition-all duration-300 cursor-pointer"
+            >
+              停止摇晃
+            </button>
           </div>
         </>
       ) : (
         <div className="relative z-10 w-full max-w-[380px] animate-fade-in-up">
           <div className="bg-[rgba(255,255,255,0.06)] backdrop-blur-sm border border-[rgba(255,255,255,0.08)] rounded-2xl p-8 text-center">
-            <div className="text-3xl mb-4">📊</div>
+            <BarChart3 className="w-8 h-8 mx-auto mb-4 text-white" />
             <h2 className="text-xl font-bold text-white mb-6">摇晃报告</h2>
             <div className="space-y-4 mb-8">
-              <div className="flex justify-between items-center py-2 border-b border-[rgba(255,255,255,0.06)]">
+              <div className="flex justify-between items-center py-2">
                 <span className="text-[rgba(255,255,255,0.6)] text-sm">摇晃次数</span>
                 <span className="text-white font-semibold">{count}次</span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-[rgba(255,255,255,0.06)]">
+              <div className="flex justify-between items-center py-2">
                 <span className="text-[rgba(255,255,255,0.6)] text-sm">峰值力度</span>
                 <span className="text-white font-semibold">{peak}%</span>
               </div>
               <div className="flex justify-between items-center py-2">
                 <span className="text-[rgba(255,255,255,0.6)] text-sm">纠结程度</span>
-                <span className="font-semibold" style={{ color: getIntensityColor(peak) }}>
-                  {tangleInfo.emoji} {tangleInfo.label}
+                <span className="font-semibold flex items-center gap-1" style={{ color: getIntensityColor(peak) }}>
+                  <TangleIcon level={tangleInfo.level} /> {tangleInfo.label}
                 </span>
               </div>
             </div>
             <button
               onClick={handleFinish}
-              className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-semibold hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300"
+              className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-semibold hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer flex items-center justify-center gap-2"
             >
-              开始AI分析 →
+              <span>开始AI分析</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -532,7 +551,7 @@ function AnalyzingPhase() {
       <div className="relative z-10 text-center">
         <div className="relative w-24 h-24 mx-auto mb-8">
           <div className="absolute inset-0 flex items-center justify-center animate-float-up">
-            <span className="text-6xl">🧠</span>
+            <Sparkles className="w-12 h-12 text-[#7c3aed]" />
           </div>
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-24 h-24 rounded-full border-2 border-[rgba(79,70,229,0.2)] animate-[spin_3s_linear_infinite]" />
@@ -600,14 +619,14 @@ function ResultPhase({
         result
       );
       setSaved(true);
-      showToast("决策已记录！一个月后回来看看这个选择让你满意吗 😉", "success", 4000);
+      showToast("决策已记录！一个月后回来看看这个选择让你满意吗", "success", 4000);
     } catch {
       showToast("保存失败，请重试", "error");
     }
   };
 
   const handleShare = async () => {
-    const shareText = `🎯 摇一摇决策器AI分析\n\n我在纠结：${dilemma}\n推荐：${result.recommendLabel}\n\n💡 ${result.insight}\n\n摇晃力度：${shakeStats.peakIntensity}% | 置信度：${result.confidence}%\n\n👉 你也来试试：${window.location.origin}`;
+    const shareText = `摇一摇决策器AI分析\n\n我在纠结：${dilemma}\n推荐：${result.recommendLabel}\n\n${result.insight}\n\n摇晃力度：${shakeStats.peakIntensity}% | 置信度：${result.confidence}%\n\n你也来试试：${window.location.origin}`;
 
     if (navigator.share) {
       try {
@@ -637,9 +656,9 @@ function ResultPhase({
     <div className="relative w-full min-h-screen flex flex-col items-center justify-center px-4 py-20">
       <Link
         href="/"
-        className="fixed top-20 left-4 sm:left-8 z-30 text-sm text-[rgba(255,255,255,0.5)] hover:text-white transition-colors flex items-center gap-1"
+        className="fixed top-20 left-4 sm:left-8 z-30 text-sm text-[rgba(255,255,255,0.5)] hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
       >
-        <span>←</span>
+        <ArrowLeft className="w-4 h-4" />
         <span>返回</span>
       </Link>
 
@@ -648,7 +667,7 @@ function ResultPhase({
           {/* Header */}
           <div className="p-6 sm:p-8 pb-4 flex items-center justify-between">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <span>🎯</span>
+              <Target className="w-5 h-5" />
               <span>AI 决策分析报告</span>
             </h2>
             <div className="flex items-center gap-2">
@@ -707,7 +726,7 @@ function ResultPhase({
             {/* Root Causes */}
             <div className="mb-6 animate-fade-in-up" style={{ animationDelay: "0.15s" }}>
               <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                <span>🔍</span>
+                <Search className="w-4 h-4" />
                 <span>纠结根因分析</span>
               </h3>
               <ul className="space-y-3">
@@ -727,7 +746,7 @@ function ResultPhase({
             {/* Suggestions */}
             <div className="mb-6 animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
               <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                <span>💡</span>
+                <Lightbulb className="w-4 h-4" />
                 <span>决策建议</span>
               </h3>
               <div className="space-y-2">
@@ -747,7 +766,7 @@ function ResultPhase({
             {/* Tangle Analysis */}
             <div className="mb-6 animate-fade-in-up" style={{ animationDelay: "0.55s" }}>
               <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                <span>📱</span>
+                <Smartphone className="w-4 h-4" />
                 <span>摇晃解读</span>
               </h3>
               <div className="flex items-start gap-3">
@@ -764,7 +783,7 @@ function ResultPhase({
                     {shakeStats.peakIntensity}%
                   </div>
                   <span className="text-xs text-[rgba(255,255,255,0.5)]">
-                    {getTangleInfo(shakeStats.peakIntensity).emoji}
+                    <TangleIcon level={getTangleInfo(shakeStats.peakIntensity).level} className="w-4 h-4 mx-auto" />
                   </span>
                 </div>
               </div>
@@ -780,7 +799,7 @@ function ResultPhase({
               }}
             >
               <p className="text-base text-white font-medium leading-relaxed">
-                "{result.insight}"
+                &ldquo;{result.insight}&rdquo;
               </p>
             </div>
 
@@ -788,7 +807,7 @@ function ResultPhase({
             {mock && (
               <div className="mb-4 text-center">
                 <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[rgba(251,191,36,0.1)] border border-[rgba(251,191,36,0.2)] text-xs text-[#fbbf24]">
-                  <span>🔧</span>
+                  <Zap className="w-4 h-4" />
                   <span>Demo 模式 — 使用预设分析结果</span>
                 </span>
               </div>
@@ -798,30 +817,51 @@ function ResultPhase({
             <div className="flex flex-col sm:flex-row gap-3 pb-8">
               <button
                 onClick={onReset}
-                className="flex-1 py-3 px-6 rounded-xl border border-[rgba(255,255,255,0.15)] text-white font-medium hover:bg-[rgba(255,255,255,0.06)] transition-all duration-300"
+                className="flex-1 py-3 px-6 rounded-xl border border-[rgba(255,255,255,0.15)] text-white font-medium hover:bg-[rgba(255,255,255,0.06)] transition-all duration-300 cursor-pointer flex items-center justify-center gap-2"
               >
-                🔄 再来一次
+                <RotateCcw className="w-4 h-4" />
+                <span>再来一次</span>
               </button>
               <button
                 onClick={handleShare}
-                className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 ${
+                className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 ${
                   copied
                     ? "bg-[rgba(56,189,248,0.15)] border border-[rgba(56,189,248,0.3)] text-[#38bdf8]"
                     : "border border-[rgba(255,255,255,0.15)] text-white hover:bg-[rgba(255,255,255,0.06)]"
                 }`}
               >
-                {copied ? "✓ 已复制" : "🔗 分享给朋友"}
+                {copied ? (
+                  <>
+                    <Check className="w-4 h-4 text-[#34d399]" />
+                    <span>已复制</span>
+                  </>
+                ) : (
+                  <>
+                    <Link2 className="w-4 h-4" />
+                    <span>分享给朋友</span>
+                  </>
+                )}
               </button>
               <button
                 onClick={handleSave}
                 disabled={saved}
-                className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 ${
+                className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 ${
                   saved
                     ? "bg-[rgba(52,211,153,0.15)] border border-[rgba(52,211,153,0.3)] text-[#34d399]"
                     : "bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white hover:shadow-lg"
                 }`}
               >
-                {saved ? "✅ 已保存" : "💾 保存到决策日记"}
+                {saved ? (
+                  <>
+                    <Check className="w-4 h-4 text-[#34d399]" />
+                    <span>已保存</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>保存到决策日记</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -917,7 +957,7 @@ export default function DecidePage() {
       {/* Error toast */}
       {error && phase === "result" && (
         <div className="fixed top-20 left-0 right-0 z-40 bg-[rgba(244,114,182,0.15)] border-b border-[rgba(244,114,182,0.3)] backdrop-blur-md px-4 py-3 text-center">
-          <p className="text-sm text-[#f472b6]">⚠️ {error}</p>
+          <p className="text-sm text-[#f472b6]">{error}</p>
         </div>
       )}
 
@@ -971,14 +1011,13 @@ export default function DecidePage() {
         ) : error ? (
           <div className="flex items-center justify-center min-h-[calc(100vh-8rem)]">
             <div className="text-center">
-              <div className="text-4xl mb-4">😔</div>
               <h1 className="text-2xl font-bold text-white mb-2">分析出错了</h1>
               <p className="text-[rgba(255,255,255,0.6)] mb-6">{error}</p>
               <button
                 onClick={handleReset}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-medium hover:opacity-90 transition-opacity"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-medium hover:opacity-90 transition-opacity cursor-pointer"
               >
-                <span>🔄</span>
+                <RotateCcw className="w-4 h-4" />
                 <span>再来一次</span>
               </button>
             </div>

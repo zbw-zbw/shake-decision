@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { Smartphone } from "lucide-react";
 import { getUnratedCount } from "@/lib/storage";
 
 const navLinks = [
@@ -48,13 +49,13 @@ export function Navbar() {
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled
-            ? "bg-[rgba(15,11,26,0.9)] backdrop-blur-md border-b border-[rgba(255,255,255,0.08)]"
+            ? "bg-[rgba(15,11,26,0.9)] backdrop-blur-md"
             : "bg-[rgba(15,11,26,0.8)] backdrop-blur-md"
         }`}
       >
         <div className="max-w-[1100px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-white font-bold text-lg">
-            <span className="text-xl">📱</span>
+          <Link href="/" className="flex items-center gap-2 text-white font-bold text-lg cursor-pointer">
+            <Smartphone className="w-5 h-5" />
             <span>摇一摇决策器</span>
           </Link>
 
@@ -64,7 +65,7 @@ export function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`text-sm transition-colors hover:text-white relative ${
+                className={`text-sm transition-colors hover:text-white relative cursor-pointer ${
                   pathname === link.href
                     ? "text-white font-medium"
                     : "text-[rgba(255,255,255,0.7)]"
@@ -80,7 +81,7 @@ export function Navbar() {
 
           {/* Mobile hamburger */}
           <button
-            className="md:hidden text-white p-2"
+            className="md:hidden text-white p-2 cursor-pointer"
             onClick={() => setMenuOpen(!menuOpen)}
             aria-label="Toggle menu"
           >
@@ -118,7 +119,7 @@ export function Navbar() {
             <Link
               key={link.href}
               href={link.href}
-              className={`text-2xl transition-colors hover:text-white relative ${
+              className={`text-2xl transition-colors hover:text-white relative cursor-pointer ${
                 pathname === link.href
                   ? "text-white font-bold"
                   : "text-[rgba(255,255,255,0.7)]"

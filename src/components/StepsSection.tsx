@@ -1,5 +1,7 @@
 "use client";
 
+import { Smartphone, RotateCw, Target, Flame, Fish } from "lucide-react";
+
 export function StepsSection() {
   return (
     <section className="relative w-full py-12 sm:py-20 px-4 sm:px-6">
@@ -29,14 +31,14 @@ export function StepsSection() {
               </div>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-1.5 text-sm">
-                  <span className="text-[#38bdf8]">选项A：🍲 火锅</span>
+                  <span className="text-[#38bdf8] flex items-center gap-1"><Flame className="w-3.5 h-3.5" /> 选项A：火锅</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-sm">
-                  <span className="text-[#f472b6]">选项B：🍣 日料</span>
+                  <span className="text-[#f472b6] flex items-center gap-1"><Fish className="w-3.5 h-3.5" /> 选项B：日料</span>
                 </div>
               </div>
-              <button className="w-full py-2 rounded-lg bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white text-sm font-medium flex items-center justify-center gap-2">
-                <span>🔄</span>
+              <button className="w-full py-2 rounded-lg bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white text-sm font-medium flex items-center justify-center gap-2 cursor-pointer">
+                <RotateCw className="w-3.5 h-3.5" />
                 <span>摇一摇手机，开始分析</span>
               </button>
             </div>
@@ -52,7 +54,7 @@ export function StepsSection() {
             </h3>
             <div className="bg-[rgba(0,0,0,0.2)] rounded-xl p-4 border border-[rgba(255,255,255,0.06)]">
               <div className="flex items-center gap-2 text-white text-sm font-medium mb-4">
-                <span>📱</span>
+                <Smartphone className="w-4 h-4" />
                 <span>检测到摇晃！</span>
               </div>
               <div className="mb-3">
@@ -74,7 +76,7 @@ export function StepsSection() {
                   <span className="animate-glow-pulse absolute inline-flex h-full w-full rounded-full bg-[#fbbf24]" />
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-[#fbbf24]" />
                 </span>
-                <span>纠结程度：🟡 中度纠结</span>
+                <span className="flex items-center gap-1.5">纠结程度：<span className="w-2.5 h-2.5 rounded-full bg-[#fbbf24] inline-block" /> 中度纠结</span>
               </div>
               <p className="text-xs text-[rgba(255,255,255,0.4)]">
                 AI 正在分析你的内心倾向...
@@ -92,13 +94,13 @@ export function StepsSection() {
             </h3>
             <div className="bg-[rgba(0,0,0,0.2)] rounded-xl p-4 border border-[rgba(255,255,255,0.06)]">
               <div className="flex items-center gap-2 text-white text-sm font-medium mb-3">
-                <span>🎯</span>
+                <Target className="w-4 h-4" />
                 <span>AI 决策分析报告</span>
               </div>
               <div className="flex items-center justify-between mb-4">
                 <div className="text-sm">
                   <span className="text-[rgba(255,255,255,0.5)]">推荐：</span>
-                  <span className="text-[#fbbf24] font-medium">🍲 火锅</span>
+                  <span className="text-[#fbbf24] font-medium flex items-center gap-1"><Flame className="w-3.5 h-3.5" /> 火锅</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="relative w-10 h-10">
@@ -131,8 +133,7 @@ export function StepsSection() {
                   <span className="text-xs text-[rgba(255,255,255,0.5)]">置信度</span>
                 </div>
               </div>
-              <div className="border-t border-[rgba(255,255,255,0.06)] pt-3 mb-3">
-                <p className="text-xs text-[rgba(255,255,255,0.5)] mb-2 text-center">─── 纠结根因分析 ───</p>
+              <div className="pt-3 mb-3">
                 <ul className="space-y-2">
                   <li className="flex items-start gap-2 text-xs text-[rgba(255,255,255,0.7)]">
                     <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#4f46e5] to-[#fbbf24] shrink-0" />
@@ -148,14 +149,13 @@ export function StepsSection() {
                   </li>
                 </ul>
               </div>
-              <div className="border-t border-[rgba(255,255,255,0.06)] pt-3">
-                <p className="text-xs text-[rgba(255,255,255,0.5)] mb-2 text-center">─── 决策建议 ───</p>
+              <div className="pt-3">
                 <div className="space-y-1.5">
-                  <p className="text-xs text-[rgba(255,255,255,0.7)]">
-                    <span className="text-[#fbbf24]">🔥</span> 今天吃火锅，满足直觉需求
+                  <p className="text-xs text-[rgba(255,255,255,0.7)] flex items-center gap-1">
+                    <Flame className="w-3.5 h-3.5 text-[#fbbf24]" /> 今天吃火锅，满足直觉需求
                   </p>
-                  <p className="text-xs text-[rgba(255,255,255,0.7)]">
-                    <span className="text-[#f472b6]">🍣</span> 日料留给周末，当作对自己的奖励
+                  <p className="text-xs text-[rgba(255,255,255,0.7)] flex items-center gap-1">
+                    <Fish className="w-3.5 h-3.5 text-[#f472b6]" /> 日料留给周末，当作对自己的奖励
                   </p>
                 </div>
               </div>

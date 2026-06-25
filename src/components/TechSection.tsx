@@ -1,10 +1,12 @@
 "use client";
 
+import { Smartphone, Brain, Zap, Palette } from "lucide-react";
+
 const techStack = [
-  { icon: "📱", label: "硬件接入：DeviceMotion API（陀螺仪 + 加速度计）" },
-  { icon: "🧠", label: "AI 分析：DeepSeek API（自然语言理解 + 心理倾向推断）" },
-  { icon: "⚡", label: "前端框架：Next.js 14 + React + TypeScript" },
-  { icon: "🎨", label: "UI 框架：Tailwind CSS + CSS Animation" },
+  { icon: Smartphone, label: "硬件接入：DeviceMotion API（陀螺仪 + 加速度计）" },
+  { icon: Brain, label: "AI 分析：DeepSeek API（自然语言理解 + 心理倾向推断）" },
+  { icon: Zap, label: "前端框架：Next.js 14 + React + TypeScript" },
+  { icon: Palette, label: "UI 框架：Tailwind CSS + CSS Animation" },
 ];
 
 export function TechSection() {
@@ -28,7 +30,7 @@ export function TechSection() {
                     key={index}
                     className="flex items-start gap-3 text-[rgba(255,255,255,0.7)] text-sm"
                   >
-                    <span className="text-lg shrink-0">{item.icon}</span>
+                    <span className="shrink-0"><item.icon className="w-5 h-5 text-white opacity-80" /></span>
                     <span>{item.label}</span>
                   </li>
                 ))}

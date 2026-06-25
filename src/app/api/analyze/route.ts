@@ -68,8 +68,8 @@ function generateMockResult(input: DecisionInput): AnalysisResult {
       `你的纠结可能不在于两个选项本身，而在于你害怕做出选择后会后悔`,
     ],
     suggestions: [
-      { icon: "✅", text: "跟随你的第一直觉，选择最先想到的那个" },
-      { icon: "⏰", text: "给自己3分钟倒计时做决定，超时就选第一个想到的" },
+      { icon: "check", text: "跟随你的第一直觉，选择最先想到的那个" },
+      { icon: "clock", text: "给自己3分钟倒计时做决定，超时就选第一个想到的" },
     ],
     insight:
       "你纠结的不是哪个选项更好，而是你害怕做出'错误'的选择。但其实，很多决策并没有对错之分。",

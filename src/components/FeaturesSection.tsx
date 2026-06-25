@@ -1,20 +1,22 @@
 "use client";
 
+import { Smartphone, Brain, BarChart3 } from "lucide-react";
+
 const features = [
   {
-    icon: "📱",
+    icon: Smartphone,
     title: "陀螺仪感应",
     description:
       "真实调用 DeviceMotion API，摇晃力度越大，说明越纠结，AI分析越深入",
   },
   {
-    icon: "🧠",
+    icon: Brain,
     title: "心理学分析",
     description:
       "AI不只看选项，更分析你的措辞、提及顺序、犹豫点，找到纠结的根因",
   },
   {
-    icon: "📊",
+    icon: BarChart3,
     title: "决策日记",
     description:
       "记录每次决策和AI建议，一个月后回看：你的选择让你满意吗？",
@@ -36,8 +38,8 @@ export function FeaturesSection() {
               className="fade-in flex flex-col items-center text-center p-6"
               style={{ animationDelay: `${index * 0.15}s` }}
             >
-              <div className="text-6xl mb-5 animate-float-up" style={{ animationDelay: `${index * 0.3}s` }}>
-                {feature.icon}
+              <div className="mb-5 animate-float-up" style={{ animationDelay: `${index * 0.3}s` }}>
+                <feature.icon className="w-14 h-14 text-white opacity-80 mx-auto" />
               </div>
               <h3 className="text-lg font-semibold text-white mb-3">
                 {feature.title}

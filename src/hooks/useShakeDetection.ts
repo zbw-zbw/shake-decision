@@ -15,16 +15,16 @@ export interface ShakeResult {
   startListening: () => void;
   stopListening: () => void;
   tangleLevel: TangleLevel;
-  tangleEmoji: string;
+  tangleLabel: string;
   peakIntensity: number;
   isClickMode: boolean;
 }
 
-function getTangleLevel(intensity: number): { level: TangleLevel; emoji: string } {
-  if (intensity <= 30) return { level: "light", emoji: "💚" };
-  if (intensity <= 60) return { level: "medium", emoji: "🟡" };
-  if (intensity <= 85) return { level: "heavy", emoji: "🟠" };
-  return { level: "extreme", emoji: "🔴" };
+function getTangleLevel(intensity: number): { level: TangleLevel; label: string } {
+  if (intensity <= 30) return { level: "light", label: "轻度纠结" };
+  if (intensity <= 60) return { level: "medium", label: "中度纠结" };
+  if (intensity <= 85) return { level: "heavy", label: "重度纠结" };
+  return { level: "extreme", label: "极度纠结" };
 }
 
 export function useShakeDetection(): ShakeResult {
@@ -224,7 +224,7 @@ export function useShakeDetection(): ShakeResult {
     startListening,
     stopListening,
     tangleLevel: tangle.level,
-    tangleEmoji: tangle.emoji,
+    tangleLabel: tangle.label,
     peakIntensity,
     isClickMode,
   };
