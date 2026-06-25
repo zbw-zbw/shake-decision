@@ -43,6 +43,7 @@ export default function RootLayout({
     <html
       lang="zh-CN"
       className={`${inter.variable} ${notoSansSC.variable} h-full antialiased`}
+      style={{ backgroundColor: "#0f0b1a" }}
     >
       <body className="min-h-full flex flex-col relative">
         <ToastProvider>

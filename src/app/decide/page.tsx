@@ -150,7 +150,7 @@ function DecisionInputForm({
   const isDisabled = !dilemma.trim() || !optionA.trim() || !optionB.trim() || dilemma.trim().length < 5;
 
   return (
-    <div className="w-full max-w-[520px] mx-auto px-4">
+    <div className="w-full max-w-[520px] mx-auto px-4 overflow-x-hidden">
       <div className="bg-[rgba(255,255,255,0.06)] backdrop-blur-sm border border-[rgba(255,255,255,0.08)] rounded-2xl overflow-hidden animate-fade-in-up">
         <div
           className="h-[3px] w-full"
@@ -332,11 +332,15 @@ function ShakeInterface({
     if (startedRef.current) return;
     startedRef.current = true;
     const start = async () => {
+      // iOS 13+ 需要用户手势触发权限请求
       if (shake.permissionState === "prompt" && !shake.isClickMode) {
-        const granted = await shake.requestPermission();
-        if (granted) shake.startListening();
+        // 不要在这里调用 requestPermission — 改为在用户首次点击圆形按钮时请求
+        // 先直接开始监听，如果是 Android 会直接生效
+        shake.startListening();
       } else if (shake.permissionState === "granted" && !shake.isClickMode) {
         shake.startListening();
+      } else if (shake.isClickMode || shake.permissionState === "unsupported") {
+        // PC 模式不需要 DeviceMotion
       }
     };
     start();
@@ -370,6 +374,18 @@ function ShakeInterface({
     onAnalyze();
   };
 
+  const handleCircleClick = () => {
+    // 首次点击时尝试请求陀螺仪权限（iOS 13+ 必须在用户手势中调用）
+    if (!startedRef.current || (shake.permissionState === "prompt" && !shake.isClickMode)) {
+      shake.requestPermission().then((granted) => {
+        if (granted) {
+          startedRef.current = true;
+          shake.startListening();
+        }
+      });
+    }
+  };
+
   const handleMouseDown = () => {
     if (shake.isClickMode || shake.permissionState === "unsupported") {
       clickShake.startClickHold();
@@ -386,20 +402,13 @@ function ShakeInterface({
   const circleColor = getIntensityColor(intensity);
 
   return (
-    <div className="relative w-full min-h-screen flex flex-col items-center justify-center px-4">
+    <div className="relative w-full min-h-screen flex flex-col items-center justify-center px-4 overflow-x-hidden">
       <div
         className="fixed inset-0 pointer-events-none transition-opacity duration-500"
         style={{
           backgroundImage: `radial-gradient(ellipse at 50% 50%, rgba(79,70,229,${bgOpacity}) 0%, transparent 60%)`,
         }}
       />
-      <Link
-        href="/"
-        className="fixed top-20 left-4 sm:left-8 z-30 text-sm text-[rgba(255,255,255,0.5)] hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        <span>返回</span>
-      </Link>
       <div className="relative z-10 text-center mb-8 max-w-md">
         <p className="text-[rgba(255,255,255,0.5)] text-sm mb-2">你在纠结</p>
         <p className="text-white font-medium text-lg mb-1">{dilemma}</p>
@@ -429,6 +438,7 @@ function ShakeInterface({
               />
             </div>
             <button
+              onClick={handleCircleClick}
               onMouseDown={handleMouseDown}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
@@ -541,7 +551,7 @@ function AnalyzingPhase() {
   }, []);
 
   return (
-    <div className="relative w-full min-h-screen flex flex-col items-center justify-center px-4">
+    <div className="relative w-full min-h-screen flex flex-col items-center justify-center px-4 overflow-x-hidden">
       <div
         className="fixed inset-0 pointer-events-none"
         style={{
@@ -653,14 +663,7 @@ function ResultPhase({
   const confColor = getConfidenceColor(result.confidence);
 
   return (
-    <div className="relative w-full min-h-screen flex flex-col items-center justify-center px-4 py-20">
-      <Link
-        href="/"
-        className="fixed top-20 left-4 sm:left-8 z-30 text-sm text-[rgba(255,255,255,0.5)] hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        <span>返回</span>
-      </Link>
+    <div className="relative w-full min-h-screen flex flex-col items-center justify-center px-4 py-20 overflow-x-hidden">
 
       <div className="w-full max-w-[560px] mx-auto animate-fade-in-up">
         <div className="bg-[rgba(255,255,255,0.06)] backdrop-blur-sm border border-[rgba(255,255,255,0.08)] rounded-2xl overflow-hidden">
