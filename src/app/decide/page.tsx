@@ -1,0 +1,990 @@
+"use client";
+
+import { useState, useCallback, useEffect, useRef } from "react";
+import Link from "next/link";
+import {
+  useShakeDetection,
+  useClickShake,
+  TangleLevel,
+} from "@/hooks/useShakeDetection";
+import { AnalysisResult } from "@/types/decision";
+import { saveDecision } from "@/lib/storage";
+import { useToast } from "@/components/Toast";
+
+// ─── Types ───
+type Phase = "input" | "shaking" | "analyzing" | "result";
+
+// ─── Quick Templates ───
+const templates = [
+  {
+    emoji: "🍜",
+    label: "今天吃什么",
+    dilemma: "中午吃什么好纠结",
+    optionA: "外卖",
+    optionB: "食堂",
+  },
+  {
+    emoji: "🛍️",
+    label: "买还是不买",
+    dilemma: "要不要买这个东西",
+    optionA: "买",
+    optionB: "不买",
+  },
+  {
+    emoji: "🏠",
+    label: "出门还是宅家",
+    dilemma: "周末出门还是宅家",
+    optionA: "出门浪",
+    optionB: "宅家躺",
+  },
+];
+
+const loadingMessages = [
+  "正在分析你的措辞倾向...",
+  "正在解读摇晃力度...",
+  "正在推断纠结根因...",
+  "正在生成决策建议...",
+];
+
+// ─── Helpers ───
+function getTangleInfo(intensity: number) {
+  if (intensity <= 30) return { level: "light" as TangleLevel, emoji: "💚", label: "轻度纠结" };
+  if (intensity <= 60) return { level: "medium" as TangleLevel, emoji: "🟡", label: "中度纠结" };
+  if (intensity <= 85) return { level: "heavy" as TangleLevel, emoji: "🟠", label: "重度纠结" };
+  return { level: "extreme" as TangleLevel, emoji: "🔴", label: "极度纠结" };
+}
+
+function getIntensityColor(intensity: number): string {
+  if (intensity <= 30) return "#34d399";
+  if (intensity <= 60) return "#fbbf24";
+  if (intensity <= 85) return "#fb923c";
+  return "#f472b6";
+}
+
+function getConfidenceColor(confidence: number): string {
+  if (confidence >= 80) return "#34d399";
+  if (confidence >= 60) return "#fbbf24";
+  return "#fb923c";
+}
+
+// ─── HTTPS Banner ───
+function HttpsBanner() {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isSecure =
+        window.location.protocol === "https:" ||
+        window.location.hostname === "localhost";
+      setVisible(!isSecure);
+    }
+  }, []);
+  if (!visible) return null;
+  return (
+    <div className="fixed top-16 left-0 right-0 z-40 bg-[rgba(251,191,36,0.15)] border-b border-[rgba(251,191,36,0.3)] backdrop-blur-md px-4 py-3 flex items-center justify-between">
+      <p className="text-sm text-[#fbbf24]">
+        📱 陀螺仪需要 HTTPS 环境。当前使用点击模式代替，部署到 Vercel 后即可体验完整摇一摇功能。
+      </p>
+      <button
+        onClick={() => setVisible(false)}
+        className="text-[#fbbf24] hover:text-white text-lg leading-none shrink-0 ml-4"
+        aria-label="关闭提示"
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
+// ─── Input Form ───
+function DecisionInputForm({
+  onSubmit,
+}: {
+  onSubmit: (data: { dilemma: string; optionA: string; optionB: string }) => void;
+}) {
+  const [dilemma, setDilemma] = useState("");
+  const [optionA, setOptionA] = useState("");
+  const [optionB, setOptionB] = useState("");
+  const [errors, setErrors] = useState<{ dilemma?: string; optionA?: string; optionB?: string }>({});
+  const [flashField, setFlashField] = useState<string | null>(null);
+
+  const validate = useCallback(() => {
+    const nextErrors: typeof errors = {};
+    if (!dilemma.trim()) nextErrors.dilemma = "请描述你的纠结";
+    else if (dilemma.trim().length < 5) nextErrors.dilemma = "至少写5个字";
+    if (!optionA.trim()) nextErrors.optionA = "不能为空";
+    if (!optionB.trim()) nextErrors.optionB = "不能为空";
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  }, [dilemma, optionA, optionB]);
+
+  const handleSubmit = () => {
+    if (validate()) {
+      onSubmit({ dilemma: dilemma.trim(), optionA: optionA.trim(), optionB: optionB.trim() });
+    }
+  };
+
+  const applyTemplate = (t: (typeof templates)[0]) => {
+    setDilemma(t.dilemma);
+    setOptionA(t.optionA);
+    setOptionB(t.optionB);
+    setErrors({});
+    setFlashField("template");
+    setTimeout(() => setFlashField(null), 400);
+  };
+
+  const isDisabled = !dilemma.trim() || !optionA.trim() || !optionB.trim() || dilemma.trim().length < 5;
+
+  return (
+    <div className="w-full max-w-[520px] mx-auto px-4">
+      <div className="bg-[rgba(255,255,255,0.06)] backdrop-blur-sm border border-[rgba(255,255,255,0.08)] rounded-2xl overflow-hidden animate-fade-in-up">
+        <div
+          className="h-[3px] w-full"
+          style={{ background: "linear-gradient(90deg, #4f46e5, #7c3aed)" }}
+        />
+        <div className="p-6 sm:p-8">
+          <h1 className="text-2xl font-bold text-white mb-1">做个决定</h1>
+          <p className="text-sm text-[rgba(255,255,255,0.5)] mb-8">
+            描述你的纠结，摇一摇手机，让AI帮你分析
+          </p>
+
+          <div className="mb-6">
+            <label className="block text-white font-semibold text-sm mb-2">
+              你在纠结什么？
+            </label>
+            <div className="relative">
+              <textarea
+                value={dilemma}
+                onChange={(e) => {
+                  if (e.target.value.length <= 200) setDilemma(e.target.value);
+                  if (errors.dilemma) setErrors((p) => ({ ...p, dilemma: undefined }));
+                }}
+                placeholder="比如：中午吃火锅还是日料、这个offer要不要接..."
+                rows={3}
+                className={`w-full bg-[rgba(255,255,255,0.04)] border rounded-xl px-4 py-3 text-white placeholder-[rgba(255,255,255,0.25)] text-sm resize-none outline-none transition-all duration-200 focus:border-[#4f46e5] focus:shadow-[0_0_0_3px_rgba(79,70,229,0.2)] ${
+                  errors.dilemma ? "border-red-400" : "border-[rgba(255,255,255,0.08)]"
+                }`}
+              />
+              <span className="absolute bottom-3 right-3 text-xs text-[rgba(255,255,255,0.35)]">
+                {dilemma.length}/200
+              </span>
+            </div>
+            {errors.dilemma && (
+              <p className="text-red-400 text-xs mt-1.5">{errors.dilemma}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label className="block text-white font-semibold text-sm mb-2 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#38bdf8]" />
+                选项A
+              </label>
+              <div className="relative">
+                <span className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-lg bg-[#38bdf8]" />
+                <input
+                  type="text"
+                  value={optionA}
+                  onChange={(e) => {
+                    setOptionA(e.target.value);
+                    if (errors.optionA) setErrors((p) => ({ ...p, optionA: undefined }));
+                  }}
+                  placeholder="选项A：火锅"
+                  className={`w-full bg-[rgba(255,255,255,0.04)] border rounded-xl pl-4 pr-3 py-2.5 text-white placeholder-[rgba(255,255,255,0.25)] text-sm outline-none transition-all duration-200 focus:border-[#4f46e5] focus:shadow-[0_0_0_3px_rgba(79,70,229,0.2)] ${
+                    errors.optionA ? "border-red-400" : "border-[rgba(255,255,255,0.08)]"
+                  }`}
+                />
+              </div>
+              {errors.optionA && (
+                <p className="text-red-400 text-xs mt-1.5">{errors.optionA}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-white font-semibold text-sm mb-2 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#f472b6]" />
+                选项B
+              </label>
+              <div className="relative">
+                <span className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-lg bg-[#f472b6]" />
+                <input
+                  type="text"
+                  value={optionB}
+                  onChange={(e) => {
+                    setOptionB(e.target.value);
+                    if (errors.optionB) setErrors((p) => ({ ...p, optionB: undefined }));
+                  }}
+                  placeholder="选项B：日料"
+                  className={`w-full bg-[rgba(255,255,255,0.04)] border rounded-xl pl-4 pr-3 py-2.5 text-white placeholder-[rgba(255,255,255,0.25)] text-sm outline-none transition-all duration-200 focus:border-[#4f46e5] focus:shadow-[0_0_0_3px_rgba(79,70,229,0.2)] ${
+                    errors.optionB ? "border-red-400" : "border-[rgba(255,255,255,0.08)]"
+                  }`}
+                />
+              </div>
+              {errors.optionB && (
+                <p className="text-red-400 text-xs mt-1.5">{errors.optionB}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="mb-8">
+            <p className="text-xs text-[rgba(255,255,255,0.4)] mb-3">
+              或者试试快速模板 ↓
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {templates.map((t) => (
+                <button
+                  key={t.label}
+                  onClick={() => applyTemplate(t)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-300 ${
+                    flashField === "template"
+                      ? "bg-[rgba(79,70,229,0.25)] border-[rgba(79,70,229,0.5)] text-white scale-105"
+                      : "bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.7)] hover:bg-[rgba(255,255,255,0.10)] hover:border-[rgba(255,255,255,0.15)]"
+                  }`}
+                >
+                  <span>{t.emoji}</span>
+                  <span>{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={handleSubmit}
+            disabled={isDisabled}
+            className={`w-full py-4 px-8 rounded-xl text-white font-semibold text-base flex items-center justify-center gap-2 transition-all duration-300 ${
+              isDisabled
+                ? "bg-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.3)] cursor-not-allowed"
+                : "bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
+            }`}
+          >
+            <span>准备好了，摇一摇！</span>
+            <span>📱</span>
+          </button>
+        </div>
+      </div>
+      <div className="text-center mt-6">
+        <Link href="/" className="text-sm text-[rgba(255,255,255,0.5)] hover:text-white transition-colors">
+          ← 返回首页
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+// ─── Shake Interface ───
+function ShakeInterface({
+  dilemma,
+  optionA,
+  optionB,
+  onReport,
+  onAnalyze,
+}: {
+  dilemma: string;
+  optionA: string;
+  optionB: string;
+  onReport: (stats: { shakeCount: number; peakIntensity: number; tangleLevel: TangleLevel }) => void;
+  onAnalyze: () => void;
+}) {
+  const shake = useShakeDetection();
+  const [localIntensity, setLocalIntensity] = useState(0);
+  const [localCount, setLocalCount] = useState(0);
+  const [localPeak, setLocalPeak] = useState(0);
+  const [shakingPhase, setShakingPhase] = useState<"shaking" | "finished">("shaking");
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startedRef = useRef(false);
+
+  const intensity = Math.max(shake.shakeIntensity, localIntensity);
+  const count = Math.max(shake.shakeCount, localCount);
+  const peak = Math.max(shake.peakIntensity, localPeak);
+  const tangleInfo = getTangleInfo(peak);
+
+  const handleShake = useCallback((computedIntensity: number) => {
+    setLocalCount((c) => {
+      const nc = c + 1;
+      setLocalIntensity(computedIntensity);
+      if (computedIntensity > localPeak) {
+        setLocalPeak(computedIntensity);
+      }
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = setTimeout(() => {
+        setLocalIntensity(0);
+      }, 500);
+      return nc;
+    });
+  }, [localPeak]);
+
+  const clickShake = useClickShake(handleShake);
+
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    const start = async () => {
+      if (shake.permissionState === "prompt" && !shake.isClickMode) {
+        const granted = await shake.requestPermission();
+        if (granted) shake.startListening();
+      } else if (shake.permissionState === "granted" && !shake.isClickMode) {
+        shake.startListening();
+      }
+    };
+    start();
+    return () => {
+      shake.stopListening();
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, [shake]);
+
+  useEffect(() => {
+    if (shakingPhase !== "shaking") return;
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = setTimeout(() => {
+      if (count >= 3) {
+        setShakingPhase("finished");
+      }
+    }, 2000);
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, [count, shakingPhase]);
+
+  const bgOpacity = Math.min(0.05 + (intensity / 100) * 0.2, 0.25);
+
+  const handleFinish = () => {
+    onReport({
+      shakeCount: count,
+      peakIntensity: peak,
+      tangleLevel: tangleInfo.level,
+    });
+    onAnalyze();
+  };
+
+  const handleMouseDown = () => {
+    if (shake.isClickMode || shake.permissionState === "unsupported") {
+      clickShake.startClickHold();
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (shake.isClickMode || shake.permissionState === "unsupported") {
+      clickShake.stopClickHold();
+    }
+  };
+
+  const circleScale = 1 + (intensity / 100) * 0.1;
+  const circleColor = getIntensityColor(intensity);
+
+  return (
+    <div className="relative w-full min-h-screen flex flex-col items-center justify-center px-4">
+      <div
+        className="fixed inset-0 pointer-events-none transition-opacity duration-500"
+        style={{
+          backgroundImage: `radial-gradient(ellipse at 50% 50%, rgba(79,70,229,${bgOpacity}) 0%, transparent 60%)`,
+        }}
+      />
+      <Link
+        href="/"
+        className="fixed top-20 left-4 sm:left-8 z-30 text-sm text-[rgba(255,255,255,0.5)] hover:text-white transition-colors flex items-center gap-1"
+      >
+        <span>←</span>
+        <span>返回</span>
+      </Link>
+      <div className="relative z-10 text-center mb-8 max-w-md">
+        <p className="text-[rgba(255,255,255,0.5)] text-sm mb-2">你在纠结</p>
+        <p className="text-white font-medium text-lg mb-1">{dilemma}</p>
+        <div className="flex items-center justify-center gap-3 text-sm">
+          <span className="text-[#38bdf8]">A: {optionA}</span>
+          <span className="text-[rgba(255,255,255,0.3)]">vs</span>
+          <span className="text-[#f472b6]">B: {optionB}</span>
+        </div>
+      </div>
+
+      {shakingPhase === "shaking" ? (
+        <>
+          <div className="relative z-10 mb-10">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-[200px] h-[200px] rounded-full border-2 border-[rgba(79,70,229,0.3)] animate-pulse-ring" />
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div
+                className="w-[200px] h-[200px] rounded-full border-2 border-[rgba(79,70,229,0.3)] animate-pulse-ring"
+                style={{ animationDelay: "0.6s" }}
+              />
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div
+                className="w-[200px] h-[200px] rounded-full border-2 border-[rgba(79,70,229,0.3)] animate-pulse-ring"
+                style={{ animationDelay: "1.2s" }}
+              />
+            </div>
+            <button
+              onMouseDown={handleMouseDown}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onTouchStart={(e) => { e.preventDefault(); handleMouseDown(); }}
+              onTouchEnd={handleMouseUp}
+              className="relative w-[200px] h-[200px] rounded-full flex flex-col items-center justify-center text-white transition-all duration-150 select-none outline-none"
+              style={{
+                background: intensity > 0
+                  ? `linear-gradient(135deg, ${circleColor}, #7c3aed)`
+                  : "linear-gradient(135deg, #4f46e5, #7c3aed)",
+                transform: `scale(${circleScale})`,
+                boxShadow: intensity > 0
+                  ? `0 0 60px ${circleColor}60`
+                  : "0 0 40px rgba(79,70,229,0.3)",
+              }}
+            >
+              {intensity > 0 ? (
+                <>
+                  <span className="text-4xl font-bold">{intensity}%</span>
+                  <span className="text-lg mt-1">{tangleInfo.emoji}</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-5xl mb-2">📱</span>
+                  <span className="text-sm font-medium">
+                    {shake.isClickMode || shake.permissionState === "unsupported"
+                      ? "疯狂点击！"
+                      : "摇一摇手机"}
+                  </span>
+                </>
+              )}
+            </button>
+          </div>
+          <p className="relative z-10 text-[rgba(255,255,255,0.6)] text-sm text-center mb-8 max-w-xs">
+            {shake.isClickMode || shake.permissionState === "unsupported"
+              ? "疯狂点击按钮！点击越快越用力，说明你越纠结"
+              : "用力摇晃你的手机！摇得越猛，说明你越纠结"}
+          </p>
+          <div className="relative z-10 w-full max-w-[300px] sm:max-w-[400px] mb-4">
+            <div className="flex justify-between text-xs text-[rgba(255,255,255,0.4)] mb-1.5">
+              <span>不太纠结</span>
+              <span>纠结到爆炸</span>
+            </div>
+            <div className="h-3 bg-[rgba(255,255,255,0.08)] rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-150 ease-out"
+                style={{
+                  width: `${intensity}%`,
+                  background: `linear-gradient(90deg, #34d399, #fbbf24, #fb923c, #f472b6)`,
+                }}
+              />
+            </div>
+          </div>
+          <div className="relative z-10 text-center">
+            <p className="text-sm text-[rgba(255,255,255,0.6)]">
+              已摇 <span key={count} className="text-white font-bold text-lg inline-block animate-bounce-count">{count}</span> 次
+            </p>
+            {count > 0 && count < 3 && (
+              <p className="text-xs text-[#fbbf24] mt-2">再使劲摇几下！至少摇3次哦</p>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="relative z-10 w-full max-w-[380px] animate-fade-in-up">
+          <div className="bg-[rgba(255,255,255,0.06)] backdrop-blur-sm border border-[rgba(255,255,255,0.08)] rounded-2xl p-8 text-center">
+            <div className="text-3xl mb-4">📊</div>
+            <h2 className="text-xl font-bold text-white mb-6">摇晃报告</h2>
+            <div className="space-y-4 mb-8">
+              <div className="flex justify-between items-center py-2 border-b border-[rgba(255,255,255,0.06)]">
+                <span className="text-[rgba(255,255,255,0.6)] text-sm">摇晃次数</span>
+                <span className="text-white font-semibold">{count}次</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-[rgba(255,255,255,0.06)]">
+                <span className="text-[rgba(255,255,255,0.6)] text-sm">峰值力度</span>
+                <span className="text-white font-semibold">{peak}%</span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-[rgba(255,255,255,0.6)] text-sm">纠结程度</span>
+                <span className="font-semibold" style={{ color: getIntensityColor(peak) }}>
+                  {tangleInfo.emoji} {tangleInfo.label}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={handleFinish}
+              className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-semibold hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300"
+            >
+              开始AI分析 →
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Analyzing Phase ───
+function AnalyzingPhase() {
+  const [messageIndex, setMessageIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMessageIndex((i) => (i + 1) % loadingMessages.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="relative w-full min-h-screen flex flex-col items-center justify-center px-4">
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          backgroundImage: `radial-gradient(ellipse at 50% 50%, rgba(79,70,229,0.12) 0%, transparent 50%)`,
+        }}
+      />
+      <div className="relative z-10 text-center">
+        <div className="relative w-24 h-24 mx-auto mb-8">
+          <div className="absolute inset-0 flex items-center justify-center animate-float-up">
+            <span className="text-6xl">🧠</span>
+          </div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-24 h-24 rounded-full border-2 border-[rgba(79,70,229,0.2)] animate-[spin_3s_linear_infinite]" />
+          </div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-16 h-16 rounded-full border-2 border-[rgba(124,58,237,0.2)] animate-[spin_2s_linear_infinite_reverse]" />
+          </div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full border-2 border-[rgba(79,70,229,0.3)] animate-[spin_1.5s_linear_infinite]" />
+          </div>
+        </div>
+        <h2 className="text-xl font-bold text-white mb-4">AI 正在思考...</h2>
+        <div className="h-6 overflow-hidden">
+          <p
+            key={messageIndex}
+            className="text-[rgba(255,255,255,0.6)] text-sm animate-fade-in-up"
+          >
+            {loadingMessages[messageIndex]}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Result Phase ───
+function ResultPhase({
+  result,
+  mock,
+  shakeStats,
+  dilemma,
+  optionA,
+  optionB,
+  onReset,
+}: {
+  result: AnalysisResult;
+  mock: boolean;
+  shakeStats: { shakeCount: number; peakIntensity: number; tangleLevel: TangleLevel };
+  dilemma: string;
+  optionA: string;
+  optionB: string;
+  onReset: () => void;
+}) {
+  const [revealed, setRevealed] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    const t = setTimeout(() => setRevealed(true), 800);
+    return () => clearTimeout(t);
+  }, []);
+
+  const handleSave = () => {
+    try {
+      saveDecision(
+        {
+          dilemma,
+          optionA,
+          optionB,
+          shakeIntensity: shakeStats.peakIntensity,
+          shakeCount: shakeStats.shakeCount,
+          tangleLevel: shakeStats.tangleLevel,
+        },
+        result
+      );
+      setSaved(true);
+      showToast("决策已记录！一个月后回来看看这个选择让你满意吗 😉", "success", 4000);
+    } catch {
+      showToast("保存失败，请重试", "error");
+    }
+  };
+
+  const handleShare = async () => {
+    const shareText = `🎯 摇一摇决策器AI分析\n\n我在纠结：${dilemma}\n推荐：${result.recommendLabel}\n\n💡 ${result.insight}\n\n摇晃力度：${shakeStats.peakIntensity}% | 置信度：${result.confidence}%\n\n👉 你也来试试：${window.location.origin}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "摇一摇决策器 — AI帮我做了个决定",
+          text: shareText,
+        });
+      } catch {
+        // user cancelled share
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareText);
+        setCopied(true);
+        showToast("已复制到剪贴板，快去分享吧！", "success");
+        setTimeout(() => setCopied(false), 3000);
+      } catch {
+        showToast("复制失败，请手动复制", "error");
+      }
+    }
+  };
+
+  const recColor = result.recommendation === "A" ? "#38bdf8" : "#f472b6";
+  const confColor = getConfidenceColor(result.confidence);
+
+  return (
+    <div className="relative w-full min-h-screen flex flex-col items-center justify-center px-4 py-20">
+      <Link
+        href="/"
+        className="fixed top-20 left-4 sm:left-8 z-30 text-sm text-[rgba(255,255,255,0.5)] hover:text-white transition-colors flex items-center gap-1"
+      >
+        <span>←</span>
+        <span>返回</span>
+      </Link>
+
+      <div className="w-full max-w-[560px] mx-auto animate-fade-in-up">
+        <div className="bg-[rgba(255,255,255,0.06)] backdrop-blur-sm border border-[rgba(255,255,255,0.08)] rounded-2xl overflow-hidden">
+          {/* Header */}
+          <div className="p-6 sm:p-8 pb-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <span>🎯</span>
+              <span>AI 决策分析报告</span>
+            </h2>
+            <div className="flex items-center gap-2">
+              <div className="relative w-12 h-12">
+                <svg className="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
+                  <path
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.08)"
+                    strokeWidth="3"
+                  />
+                  <path
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none"
+                    stroke={confColor}
+                    strokeWidth="3"
+                    strokeDasharray={`${result.confidence}, 100`}
+                    className="transition-all duration-1000 ease-out"
+                    style={{ strokeDasharray: revealed ? `${result.confidence}, 100` : `0, 100` }}
+                  />
+                </svg>
+                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">
+                  {result.confidence}%
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-6 sm:px-8">
+            {/* Recommendation */}
+            <div
+              className="rounded-xl p-5 mb-6 text-center transition-all duration-700"
+              style={{
+                background: `linear-gradient(135deg, ${recColor}15, transparent)`,
+                border: `1px solid ${recColor}30`,
+              }}
+            >
+              <p className="text-xs text-[rgba(255,255,255,0.5)] mb-2">AI 推荐你选择</p>
+              <div className="relative">
+                {!revealed ? (
+                  <p className="text-2xl font-bold text-white blur-sm">分析完成！</p>
+                ) : (
+                  <p
+                    className="text-2xl font-bold transition-all duration-700"
+                    style={{ color: recColor }}
+                  >
+                    {result.recommendLabel}
+                  </p>
+                )}
+              </div>
+              <p className="text-xs text-[rgba(255,255,255,0.4)] mt-2">
+                置信度 {result.confidence}% · 选项{result.recommendation}
+              </p>
+            </div>
+
+            {/* Root Causes */}
+            <div className="mb-6 animate-fade-in-up" style={{ animationDelay: "0.15s" }}>
+              <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                <span>🔍</span>
+                <span>纠结根因分析</span>
+              </h3>
+              <ul className="space-y-3">
+                {result.rootCauses.map((cause, i) => (
+                  <li
+                    key={i}
+                    className="flex items-start gap-2.5 text-sm text-[rgba(255,255,255,0.7)] leading-relaxed animate-fade-in-up"
+                    style={{ animationDelay: `${0.2 + i * 0.1}s` }}
+                  >
+                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#4f46e5] to-[#fbbf24] shrink-0" />
+                    <span>{cause}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Suggestions */}
+            <div className="mb-6 animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
+              <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                <span>💡</span>
+                <span>决策建议</span>
+              </h3>
+              <div className="space-y-2">
+                {result.suggestions.map((s, i) => (
+                  <div
+                    key={i}
+                    className="flex items-start gap-3 bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.06)] rounded-xl px-4 py-3 animate-fade-in-up"
+                    style={{ animationDelay: `${0.45 + i * 0.1}s` }}
+                  >
+                    <span className="text-lg shrink-0">{s.icon}</span>
+                    <p className="text-sm text-[rgba(255,255,255,0.7)] leading-relaxed">{s.text}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Tangle Analysis */}
+            <div className="mb-6 animate-fade-in-up" style={{ animationDelay: "0.55s" }}>
+              <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                <span>📱</span>
+                <span>摇晃解读</span>
+              </h3>
+              <div className="flex items-start gap-3">
+                <div className="bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.06)] rounded-xl px-4 py-3 flex-1">
+                  <p className="text-sm text-[rgba(255,255,255,0.7)] leading-relaxed">
+                    {result.tangleAnalysis}
+                  </p>
+                </div>
+                <div className="text-center shrink-0">
+                  <div
+                    className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm mb-1"
+                    style={{ background: getIntensityColor(shakeStats.peakIntensity) }}
+                  >
+                    {shakeStats.peakIntensity}%
+                  </div>
+                  <span className="text-xs text-[rgba(255,255,255,0.5)]">
+                    {getTangleInfo(shakeStats.peakIntensity).emoji}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Insight */}
+            <div
+              className="rounded-xl p-5 mb-8 text-center animate-fade-in-up"
+              style={{
+                background: "linear-gradient(135deg, rgba(79,70,229,0.15), rgba(124,58,237,0.10))",
+                border: "1px solid rgba(79,70,229,0.2)",
+                animationDelay: "0.65s",
+              }}
+            >
+              <p className="text-base text-white font-medium leading-relaxed">
+                "{result.insight}"
+              </p>
+            </div>
+
+            {/* Mock tag */}
+            {mock && (
+              <div className="mb-4 text-center">
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[rgba(251,191,36,0.1)] border border-[rgba(251,191,36,0.2)] text-xs text-[#fbbf24]">
+                  <span>🔧</span>
+                  <span>Demo 模式 — 使用预设分析结果</span>
+                </span>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row gap-3 pb-8">
+              <button
+                onClick={onReset}
+                className="flex-1 py-3 px-6 rounded-xl border border-[rgba(255,255,255,0.15)] text-white font-medium hover:bg-[rgba(255,255,255,0.06)] transition-all duration-300"
+              >
+                🔄 再来一次
+              </button>
+              <button
+                onClick={handleShare}
+                className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 ${
+                  copied
+                    ? "bg-[rgba(56,189,248,0.15)] border border-[rgba(56,189,248,0.3)] text-[#38bdf8]"
+                    : "border border-[rgba(255,255,255,0.15)] text-white hover:bg-[rgba(255,255,255,0.06)]"
+                }`}
+              >
+                {copied ? "✓ 已复制" : "🔗 分享给朋友"}
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saved}
+                className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 ${
+                  saved
+                    ? "bg-[rgba(52,211,153,0.15)] border border-[rgba(52,211,153,0.3)] text-[#34d399]"
+                    : "bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white hover:shadow-lg"
+                }`}
+              >
+                {saved ? "✅ 已保存" : "💾 保存到决策日记"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ───
+export default function DecidePage() {
+  const [phase, setPhase] = useState<Phase>("input");
+  const [dilemma, setDilemma] = useState("");
+  const [optionA, setOptionA] = useState("");
+  const [optionB, setOptionB] = useState("");
+  const [shakeStats, setShakeStats] = useState<{
+    shakeCount: number;
+    peakIntensity: number;
+    tangleLevel: TangleLevel;
+  } | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [isMock, setIsMock] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = useCallback(
+    (data: { dilemma: string; optionA: string; optionB: string }) => {
+      setDilemma(data.dilemma);
+      setOptionA(data.optionA);
+      setOptionB(data.optionB);
+      setPhase("shaking");
+    },
+    []
+  );
+
+  const handleReport = useCallback(
+    (stats: { shakeCount: number; peakIntensity: number; tangleLevel: TangleLevel }) => {
+      setShakeStats(stats);
+    },
+    []
+  );
+
+  const handleAnalyze = useCallback(async () => {
+    if (!shakeStats) return;
+    setPhase("analyzing");
+    setError(null);
+
+    try {
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dilemma,
+          optionA,
+          optionB,
+          shakeIntensity: shakeStats.peakIntensity,
+          shakeCount: shakeStats.shakeCount,
+          tangleLevel: shakeStats.tangleLevel,
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `请求失败: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setAnalysisResult(data.result);
+      setIsMock(!!data.mock);
+      setPhase("result");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "分析失败";
+      setError(message);
+      setPhase("result");
+    }
+  }, [dilemma, optionA, optionB, shakeStats]);
+
+  const handleReset = useCallback(() => {
+    setDilemma("");
+    setOptionA("");
+    setOptionB("");
+    setShakeStats(null);
+    setAnalysisResult(null);
+    setIsMock(false);
+    setError(null);
+    setPhase("input");
+    window.scrollTo(0, 0);
+  }, []);
+
+  return (
+    <div className="relative min-h-screen pt-20 pb-10">
+      <HttpsBanner />
+
+      {/* Error toast */}
+      {error && phase === "result" && (
+        <div className="fixed top-20 left-0 right-0 z-40 bg-[rgba(244,114,182,0.15)] border-b border-[rgba(244,114,182,0.3)] backdrop-blur-md px-4 py-3 text-center">
+          <p className="text-sm text-[#f472b6]">⚠️ {error}</p>
+        </div>
+      )}
+
+      <div
+        className={`transition-all duration-500 ease-out ${
+          phase === "input" ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none absolute inset-0"
+        }`}
+      >
+        <div className="flex items-center justify-center min-h-[calc(100vh-8rem)]">
+          <DecisionInputForm onSubmit={handleSubmit} />
+        </div>
+      </div>
+
+      <div
+        className={`transition-all duration-500 ease-out ${
+          phase === "shaking" ? "opacity-100 scale-100" : "opacity-0 scale-105 pointer-events-none absolute inset-0"
+        }`}
+      >
+        <ShakeInterface
+          dilemma={dilemma}
+          optionA={optionA}
+          optionB={optionB}
+          onReport={handleReport}
+          onAnalyze={handleAnalyze}
+        />
+      </div>
+
+      <div
+        className={`transition-all duration-500 ease-out ${
+          phase === "analyzing" ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none absolute inset-0"
+        }`}
+      >
+        <AnalyzingPhase />
+      </div>
+
+      <div
+        className={`transition-all duration-500 ease-out ${
+          phase === "result" ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none absolute inset-0"
+        }`}
+      >
+        {analysisResult && shakeStats ? (
+          <ResultPhase
+            result={analysisResult}
+            mock={isMock}
+            shakeStats={shakeStats}
+            dilemma={dilemma}
+            optionA={optionA}
+            optionB={optionB}
+            onReset={handleReset}
+          />
+        ) : error ? (
+          <div className="flex items-center justify-center min-h-[calc(100vh-8rem)]">
+            <div className="text-center">
+              <div className="text-4xl mb-4">😔</div>
+              <h1 className="text-2xl font-bold text-white mb-2">分析出错了</h1>
+              <p className="text-[rgba(255,255,255,0.6)] mb-6">{error}</p>
+              <button
+                onClick={handleReset}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-medium hover:opacity-90 transition-opacity"
+              >
+                <span>🔄</span>
+                <span>再来一次</span>
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}

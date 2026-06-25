@@ -1,0 +1,61 @@
+[
+  {
+    "route": "/decide",
+    "firstLoadUncompressedJsBytes": 558280,
+    "firstLoadChunkPaths": [
+      "dist/static/chunks/240xrct8djpfh.js",
+      "dist/static/chunks/14mrh2-p_w84d.js",
+      "dist/static/chunks/2byp5cux3o_pm.js",
+      "dist/static/chunks/23bc6jkkgwger.js",
+      "dist/static/chunks/1g-3ccs6io4a-.js",
+      "dist/static/chunks/0wcj0sigi5hcc.js",
+      "dist/static/chunks/07u_h6i539_wj.js",
+      "dist/static/chunks/2nykiepra7i1k.js",
+      "dist/static/chunks/turbopack-420_hbr1fao1-.js"
+    ]
+  },
+  {
+    "route": "/",
+    "firstLoadUncompressedJsBytes": 548899,
+    "firstLoadChunkPaths": [
+      "dist/static/chunks/240xrct8djpfh.js",
+      "dist/static/chunks/14mrh2-p_w84d.js",
+      "dist/static/chunks/2byp5cux3o_pm.js",
+      "dist/static/chunks/053f5_p23kxrw.js",
+      "dist/static/chunks/1g-3ccs6io4a-.js",
+      "dist/static/chunks/0wcj0sigi5hcc.js",
+      "dist/static/chunks/07u_h6i539_wj.js",
+      "dist/static/chunks/2nykiepra7i1k.js",
+      "dist/static/chunks/turbopack-420_hbr1fao1-.js"
+    ]
+  },
+  {
+    "route": "/history",
+    "firstLoadUncompressedJsBytes": 539702,
+    "firstLoadChunkPaths": [
+      "dist/static/chunks/240xrct8djpfh.js",
+      "dist/static/chunks/14mrh2-p_w84d.js",
+      "dist/static/chunks/2byp5cux3o_pm.js",
+      "dist/static/chunks/431nl82uq7-9-.js",
+      "dist/static/chunks/1g-3ccs6io4a-.js",
+      "dist/static/chunks/0wcj0sigi5hcc.js",
+      "dist/static/chunks/07u_h6i539_wj.js",
+      "dist/static/chunks/2nykiepra7i1k.js",
+      "dist/static/chunks/turbopack-420_hbr1fao1-.js"
+    ]
+  },
+  {
+    "route": "/_not-found",
+    "firstLoadUncompressedJsBytes": 528760,
+    "firstLoadChunkPaths": [
+      "dist/static/chunks/240xrct8djpfh.js",
+      "dist/static/chunks/14mrh2-p_w84d.js",
+      "dist/static/chunks/2byp5cux3o_pm.js",
+      "dist/static/chunks/1g-3ccs6io4a-.js",
+      "dist/static/chunks/0wcj0sigi5hcc.js",
+      "dist/static/chunks/07u_h6i539_wj.js",
+      "dist/static/chunks/2nykiepra7i1k.js",
+      "dist/static/chunks/turbopack-420_hbr1fao1-.js"
+    ]
+  }
+]

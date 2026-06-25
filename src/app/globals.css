@@ -1,0 +1,241 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-bg-dark: #0f0b1a;
+  --color-bg-card: rgba(255, 255, 255, 0.06);
+  --color-bg-card-hover: rgba(255, 255, 255, 0.10);
+  --color-primary-start: #4f46e5;
+  --color-primary-end: #7c3aed;
+  --color-primary-deep: #3730a3;
+  --color-decision-gold: #fbbf24;
+  --color-option-a: #38bdf8;
+  --color-option-b: #f472b6;
+  --color-success: #34d399;
+  --color-warning: #fb923c;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: rgba(255, 255, 255, 0.7);
+  --color-text-muted: rgba(255, 255, 255, 0.4);
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-border-glow: rgba(79, 70, 229, 0.4);
+
+  --font-sans: var(--font-inter), var(--font-noto), system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #0f0b1a;
+  color: #ffffff;
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    radial-gradient(ellipse at 30% 20%, rgba(79, 70, 229, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 60%, rgba(124, 58, 237, 0.10) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 90%, rgba(56, 189, 248, 0.05) 0%, transparent 40%);
+}
+
+/* ─── Global micro-interactions ─── */
+a, button, [role="button"] {
+  cursor: pointer;
+}
+
+button:active, a:active {
+  transform: scale(0.98);
+}
+
+/* ─── Safe area for mobile ─── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* ─── Keyframes (GPU-accelerated only: transform + opacity) ─── */
+@keyframes shake-title {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-2deg); }
+  75% { transform: rotate(2deg); }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+@keyframes float-up {
+  0% { transform: translateY(10px); }
+  100% { transform: translateY(-10px); }
+}
+
+@keyframes shake-card {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(251, 191, 36, 0.2); }
+  50% { box-shadow: 0 0 16px rgba(251, 191, 36, 0.6); }
+}
+
+@keyframes progress-fill {
+  0% { width: 0%; }
+  100% { width: 78%; }
+}
+
+@keyframes fade-in-up {
+  0% { opacity: 0; transform: translateY(30px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bounce-down {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(8px); }
+}
+
+@keyframes spin-slow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ─── Animation utilities ─── */
+.animate-shake-title {
+  animation: shake-title 3s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2s ease-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-float-up {
+  animation: float-up 4s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.animate-shake-card {
+  animation: shake-card 0.5s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+  will-change: box-shadow;
+}
+
+.animate-progress-fill {
+  animation: progress-fill 1.5s ease-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.7s ease forwards;
+  will-change: transform, opacity;
+}
+
+.animate-bounce-down {
+  animation: bounce-down 2s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* ─── Fade-in for Intersection Observer ─── */
+.fade-in {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+  will-change: transform, opacity;
+}
+
+.fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─── Gradient text utility ─── */
+.text-gradient {
+  background: linear-gradient(135deg, #4f46e5, #fbbf24);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Toast animation ─── */
+@keyframes toast-in {
+  0% { opacity: 0; transform: translateX(100%); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@media (max-width: 640px) {
+  @keyframes toast-in {
+    0% { opacity: 0; transform: translateY(100%); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+}
+
+.animate-toast-in {
+  animation: toast-in 0.3s ease-out forwards;
+}
+
+/* ─── Slide-up for confirm panels ─── */
+@keyframes slide-up {
+  0% { opacity: 0; transform: translateY(100%); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@media (min-width: 640px) {
+  @keyframes slide-up {
+    0% { opacity: 0; transform: translate(-50%, -40%); }
+    100% { opacity: 1; transform: translate(-50%, -50%); }
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.25s ease-out forwards;
+}
+
+/* ─── Reduced motion support ─── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─── Scrollbar styling ─── */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f0b1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(79, 70, 229, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(79, 70, 229, 0.5);
+}

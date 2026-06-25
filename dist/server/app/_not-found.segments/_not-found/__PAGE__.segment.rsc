@@ -1,0 +1,6 @@
+1:"$Sreact.fragment"
+2:I[22016,["/_next/static/chunks/240xrct8djpfh.js","/_next/static/chunks/14mrh2-p_w84d.js"],""]
+3:I[97367,["/_next/static/chunks/240xrct8djpfh.js","/_next/static/chunks/14mrh2-p_w84d.js"],"OutletBoundary"]
+4:"$Sreact.suspense"
+0:{"rsc":["$","$1","c",{"children":[["$","div",null,{"className":"min-h-screen flex flex-col items-center justify-center px-4 relative z-10","children":["$","div",null,{"className":"text-center","children":[["$","div",null,{"className":"text-6xl mb-6","children":"📱"}],["$","h1",null,{"className":"text-2xl font-bold text-white mb-2","children":"页面走丢了"}],["$","p",null,{"className":"text-[rgba(255,255,255,0.5)] text-sm mb-8","children":"这个页面大概正在摇晃中...摇丢了"}],["$","$L2",null,{"href":"/","className":"inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-medium hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200","children":[["$","span",null,{"children":"←"}],["$","span",null,{"children":"返回首页"}]]}]]}]}],null,["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"81puZGsZ5AWjJUwyUecuX"}
+5:null
