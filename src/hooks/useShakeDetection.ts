@@ -35,6 +35,7 @@ export function useShakeDetection(): ShakeResult {
   const [peakIntensity, setPeakIntensity] = useState(0);
   const [permissionState, setPermissionState] = useState<PermissionState>("prompt");
   const [isClickMode, setIsClickMode] = useState(false);
+  const [isSupported, setIsSupported] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string>("初始化中...");
 
   const isSupportedRef = useRef(false);
@@ -54,7 +55,9 @@ export function useShakeDetection(): ShakeResult {
       (window.location.protocol === "https:" || window.location.hostname === "localhost");
     const hasDeviceMotion = typeof window !== "undefined" && "DeviceMotionEvent" in window;
 
-    isSupportedRef.current = hasDeviceMotion && isSecure;
+    const supported = hasDeviceMotion && isSecure;
+    isSupportedRef.current = supported;
+    setIsSupported(supported);
 
     setDebugInfo(
       `support=${hasDeviceMotion} secure=${isSecure} proto=${window.location.protocol}`
@@ -259,7 +262,7 @@ export function useShakeDetection(): ShakeResult {
     isShaking,
     shakeIntensity,
     shakeCount,
-    isSupported: isSupportedRef.current,
+    isSupported,
     permissionState,
     requestPermission,
     startListening,
