@@ -303,6 +303,7 @@ function ShakeInterface({
     shakeIntensity: shakeIntensityVal,
     peakIntensity: shakePeakVal,
     isShaking: shakeIsShaking,
+    debugInfo: shakeDebugInfo,
   } = useShakeDetection();
 
   const [count, setCount] = useState(0);
@@ -515,6 +516,13 @@ function ShakeInterface({
             >
               停止摇晃
             </button>
+          </div>
+
+          {/* Debug info */}
+          <div className="relative z-10 mt-6 px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)] max-w-[90vw] sm:max-w-[400px]">
+            <p className="text-[10px] text-[rgba(255,255,255,0.35)] font-mono break-all">
+              调试：{shakeDebugInfo}
+            </p>
           </div>
         </>
       ) : (

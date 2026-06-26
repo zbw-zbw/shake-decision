@@ -32,6 +32,10 @@ export const metadata: Metadata = {
     description: "摇晃手机，AI帮你终结选择困难症",
     type: "website",
   },
+  icons: {
+    icon: "/favicon.png",
+    apple: "/favicon.png",
+  },
 };
 
 export default function RootLayout({

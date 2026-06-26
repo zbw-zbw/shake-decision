@@ -18,6 +18,7 @@ export interface ShakeResult {
   tangleLabel: string;
   peakIntensity: number;
   isClickMode: boolean;
+  debugInfo: string;
 }
 
 function getTangleLevel(intensity: number): { level: TangleLevel; label: string } {
@@ -34,6 +35,7 @@ export function useShakeDetection(): ShakeResult {
   const [peakIntensity, setPeakIntensity] = useState(0);
   const [permissionState, setPermissionState] = useState<PermissionState>("prompt");
   const [isClickMode, setIsClickMode] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string>("初始化中...");
 
   const isSupportedRef = useRef(false);
   const listeningRef = useRef(false);
@@ -54,18 +56,25 @@ export function useShakeDetection(): ShakeResult {
 
     isSupportedRef.current = hasDeviceMotion && isSecure;
 
+    setDebugInfo(
+      `support=${hasDeviceMotion} secure=${isSecure} proto=${window.location.protocol}`
+    );
+
     if (!hasDeviceMotion || !isSecure) {
       setIsClickMode(true);
       setPermissionState("unsupported");
+      setDebugInfo((prev) => `${prev} mode=unsupported`);
     } else if (
       typeof (window as unknown as Record<string, unknown>).DeviceMotionEvent !== "undefined" &&
       "requestPermission" in ((window as unknown as Record<string, unknown>).DeviceMotionEvent as Record<string, unknown>)
     ) {
       // iOS 13+ needs explicit permission
       setPermissionState("prompt");
+      setDebugInfo((prev) => `${prev} mode=ios-prompt`);
     } else {
       // Android / other browsers
       setPermissionState("granted");
+      setDebugInfo((prev) => `${prev} mode=android-granted`);
     }
   }, []);
 
@@ -83,10 +92,17 @@ export function useShakeDetection(): ShakeResult {
 
   const handleMotion = useCallback(
     (event: DeviceMotionEvent) => {
+      // eslint-disable-next-line no-console
+      console.log("[devicemotion] listening=", listeningRef.current, "event=", event);
       if (!listeningRef.current) return;
 
       const acc = event.accelerationIncludingGravity;
-      if (!acc) return;
+      // eslint-disable-next-line no-console
+      console.log("[devicemotion] acc=", acc);
+      if (!acc) {
+        setDebugInfo("acc is null");
+        return;
+      }
 
       const x = acc.x ?? 0;
       const y = acc.y ?? 0;
@@ -103,8 +119,12 @@ export function useShakeDetection(): ShakeResult {
       const now = Date.now();
       const timeSinceLastShake = now - lastShakeTimeRef.current;
 
-      // 降低阈值到 8，让轻摇也能触发
-      if (deltaSum > 8 && timeSinceLastShake > 120) {
+      setDebugInfo(
+        `x=${x.toFixed(1)} y=${y.toFixed(1)} z=${z.toFixed(1)} Δ=${deltaSum.toFixed(1)} t=${timeSinceLastShake}`
+      );
+
+      // 降低阈值到 5，让轻摇也能触发
+      if (deltaSum > 5 && timeSinceLastShake > 120) {
         lastShakeTimeRef.current = now;
         shakeCountRef.current += 1;
         setShakeCount(shakeCountRef.current);
@@ -134,7 +154,9 @@ export function useShakeDetection(): ShakeResult {
       };
 
       if (DeviceMotionEventCtor?.requestPermission) {
+        setDebugInfo("requesting permission...");
         const response = await DeviceMotionEventCtor.requestPermission();
+        setDebugInfo(`permission response=${response}`);
         if (response === "granted") {
           setPermissionState("granted");
           setIsClickMode(false);
@@ -147,24 +169,34 @@ export function useShakeDetection(): ShakeResult {
       }
       // No explicit permission needed
       setPermissionState("granted");
+      setDebugInfo("no explicit permission needed");
       return true;
-    } catch {
+    } catch (e) {
       setPermissionState("denied");
       setIsClickMode(true);
+      setDebugInfo(`permission error=${(e as Error).message}`);
       return false;
     }
   }, []);
 
   const startListening = useCallback(() => {
+    // eslint-disable-next-line no-console
+    console.log("[useShakeDetection] startListening called, listening=", listeningRef.current);
     listeningRef.current = true;
+    setDebugInfo((prev) => `${prev} | startListening called`);
     try {
+      // Remove first to avoid duplicate listeners (e.g. StrictMode double-run)
+      window.removeEventListener("devicemotion", handleMotion);
       window.addEventListener("devicemotion", handleMotion, { passive: true });
-    } catch {
-      // Silently fail — click mode is always available
+      setDebugInfo((prev) => `${prev} | listener added`);
+    } catch (e) {
+      setDebugInfo((prev) => `${prev} | listener error=${(e as Error).message}`);
     }
   }, [handleMotion]);
 
   const stopListening = useCallback(() => {
+    // eslint-disable-next-line no-console
+    console.log("[useShakeDetection] stopListening called");
     listeningRef.current = false;
     try {
       window.removeEventListener("devicemotion", handleMotion);
@@ -236,6 +268,7 @@ export function useShakeDetection(): ShakeResult {
     tangleLabel: tangle.label,
     peakIntensity,
     isClickMode,
+    debugInfo,
   };
 }
 
