@@ -42,7 +42,7 @@ export function useShakeDetection(): ShakeResult {
   const shakeCountRef = useRef(0);
   const intensityWindowRef = useRef<number[]>([]);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const clickStartTimeRef = useRef<number>(0);
+  const lastAccRef = useRef({ x: 0, y: 0, z: 0 });
   const clickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Detect support and HTTPS
@@ -70,17 +70,15 @@ export function useShakeDetection(): ShakeResult {
   }, []);
 
   const calculateIntensity = useCallback((deltaSum: number): number => {
-    // Map deltaSum (typical range 0-15) to 0-100
-    const raw = Math.min((deltaSum / 12) * 100, 100);
-    // Apply exponential curve for better feel
-    const curved = Math.pow(raw / 100, 0.7) * 100;
-    // Smooth with sliding window
+    // deltaSum 范围约 8-50，映射到 0-100
+    const raw = Math.min(((deltaSum - 5) / 30) * 100, 100);
+    const curved = Math.pow(Math.max(raw, 0) / 100, 0.7) * 100;
     intensityWindowRef.current.push(curved);
-    if (intensityWindowRef.current.length > 10) {
+    if (intensityWindowRef.current.length > 8) {
       intensityWindowRef.current.shift();
     }
     const avg = intensityWindowRef.current.reduce((a, b) => a + b, 0) / intensityWindowRef.current.length;
-    return Math.round(avg);
+    return Math.round(Math.max(avg, 0));
   }, []);
 
   const handleMotion = useCallback(
@@ -94,20 +92,24 @@ export function useShakeDetection(): ShakeResult {
       const y = acc.y ?? 0;
       const z = acc.z ?? 0;
 
-      // Calculate magnitude of acceleration
-      const magnitude = Math.sqrt(x * x + y * y + z * z);
+      // 计算加速度变化量（去除重力的影响）
+      const deltaX = Math.abs(x - lastAccRef.current.x);
+      const deltaY = Math.abs(y - lastAccRef.current.y);
+      const deltaZ = Math.abs(z - lastAccRef.current.z);
+      const deltaSum = deltaX + deltaY + deltaZ;
 
-      // Simple threshold-based detection
+      lastAccRef.current = { x, y, z };
+
       const now = Date.now();
       const timeSinceLastShake = now - lastShakeTimeRef.current;
 
-      // Threshold: 13 m/s² catches moderate shakes on most phones
-      if (magnitude > 13 && timeSinceLastShake > 150) {
+      // 降低阈值到 8，让轻摇也能触发
+      if (deltaSum > 8 && timeSinceLastShake > 120) {
         lastShakeTimeRef.current = now;
         shakeCountRef.current += 1;
         setShakeCount(shakeCountRef.current);
 
-        const intensity = calculateIntensity(magnitude - 9.8);
+        const intensity = calculateIntensity(deltaSum);
         setShakeIntensity(intensity);
         setIsShaking(true);
 
@@ -154,8 +156,6 @@ export function useShakeDetection(): ShakeResult {
   }, []);
 
   const startListening = useCallback(() => {
-    // Always try to start listening — if DeviceMotion isn't available,
-    // the event listener simply won't fire
     listeningRef.current = true;
     try {
       window.addEventListener("devicemotion", handleMotion, { passive: true });
@@ -200,7 +200,6 @@ export function useShakeDetection(): ShakeResult {
   );
 
   const startClickHold = useCallback(() => {
-    clickStartTimeRef.current = Date.now();
     triggerClickShake();
     clickIntervalRef.current = setInterval(() => {
       triggerClickShake();

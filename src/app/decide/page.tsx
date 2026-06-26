@@ -274,12 +274,6 @@ function DecisionInputForm({
           </button>
         </div>
       </div>
-      <div className="text-center mt-6">
-        <Link href="/" className="text-sm text-[rgba(255,255,255,0.5)] hover:text-white transition-colors cursor-pointer inline-flex items-center gap-1">
-          <ArrowLeft className="w-4 h-4" />
-          <span>返回首页</span>
-        </Link>
-      </div>
     </div>
   );
 }
@@ -298,66 +292,83 @@ function ShakeInterface({
   onReport: (stats: { shakeCount: number; peakIntensity: number; tangleLevel: TangleLevel }) => void;
   onAnalyze: () => void;
 }) {
-  const shake = useShakeDetection();
-  const [localIntensity, setLocalIntensity] = useState(0);
-  const [localCount, setLocalCount] = useState(0);
-  const [localPeak, setLocalPeak] = useState(0);
+  const {
+    permissionState,
+    isClickMode,
+    isSupported,
+    startListening,
+    stopListening,
+    requestPermission,
+    shakeCount: shakeCountVal,
+    shakeIntensity: shakeIntensityVal,
+    peakIntensity: shakePeakVal,
+    isShaking: shakeIsShaking,
+  } = useShakeDetection();
+
+  const [count, setCount] = useState(0);
+  const [intensity, setIntensity] = useState(0);
+  const [peak, setPeak] = useState(0);
   const [shakingPhase, setShakingPhase] = useState<"shaking" | "finished">("shaking");
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const startedRef = useRef(false);
+  const mountedRef = useRef(false);
 
-  const intensity = Math.max(shake.shakeIntensity, localIntensity);
-  const count = Math.max(shake.shakeCount, localCount);
-  const peak = Math.max(shake.peakIntensity, localPeak);
   const tangleInfo = getTangleInfo(peak);
 
-  const handleShake = useCallback((computedIntensity: number) => {
-    setLocalCount((c) => {
-      const nc = c + 1;
-      setLocalIntensity(computedIntensity);
-      if (computedIntensity > localPeak) {
-        setLocalPeak(computedIntensity);
-      }
+  // Sync gyroscope data from hook into unified local state
+  useEffect(() => {
+    if (shakeCountVal > 0) {
+      setCount(shakeCountVal);
+      setIntensity(shakeIntensityVal);
+      if (shakePeakVal > peak) setPeak(shakePeakVal);
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       idleTimerRef.current = setTimeout(() => {
-        setLocalIntensity(0);
+        setIntensity(0);
+      }, 500);
+    }
+  }, [shakeCountVal, shakeIntensityVal, shakePeakVal]);
+
+  // Click-mode callback
+  const handleClickShake = useCallback((computedIntensity: number) => {
+    setCount((c) => {
+      const nc = c + 1;
+      setIntensity(computedIntensity);
+      setPeak((p) => Math.max(p, computedIntensity));
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = setTimeout(() => {
+        setIntensity(0);
       }, 500);
       return nc;
     });
-  }, [localPeak]);
+  }, []);
 
-  const clickShake = useClickShake(handleShake);
+  const clickShake = useClickShake(handleClickShake);
 
+  // Mount: try to start listening once (for Android and click mode this is safe)
   useEffect(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
-    const start = async () => {
-      // iOS 13+ 需要用户手势触发权限请求
-      if (shake.permissionState === "prompt" && !shake.isClickMode) {
-        // 不要在这里调用 requestPermission — 改为在用户首次点击圆形按钮时请求
-        // 先直接开始监听，如果是 Android 会直接生效
-        shake.startListening();
-      } else if (shake.permissionState === "granted" && !shake.isClickMode) {
-        shake.startListening();
-      } else if (shake.isClickMode || shake.permissionState === "unsupported") {
-        // PC 模式不需要 DeviceMotion
-      }
-    };
-    start();
+    if (mountedRef.current) return;
+    mountedRef.current = true;
+    if (isSupported) {
+      startListening();
+    }
+  }, [isSupported, startListening]);
+
+  // Unmount cleanup
+  useEffect(() => {
     return () => {
-      shake.stopListening();
+      stopListening();
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     };
-  }, [shake]);
+  }, [stopListening]);
 
+  // Auto-finish after idle if enough shakes
   useEffect(() => {
     if (shakingPhase !== "shaking") return;
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     idleTimerRef.current = setTimeout(() => {
-      if (count >= 3) {
+      if (count >= 2) {
         setShakingPhase("finished");
       }
-    }, 2000);
+    }, 2500);
     return () => {
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     };
@@ -374,26 +385,28 @@ function ShakeInterface({
     onAnalyze();
   };
 
-  const handleCircleClick = () => {
-    // 首次点击时尝试请求陀螺仪权限（iOS 13+ 必须在用户手势中调用）
-    if (!startedRef.current || (shake.permissionState === "prompt" && !shake.isClickMode)) {
-      shake.requestPermission().then((granted) => {
-        if (granted) {
-          startedRef.current = true;
-          shake.startListening();
-        }
-      });
+  const handleCircleClick = async () => {
+    // iOS 13+ 必须在用户手势中调用 requestPermission
+    if (permissionState === "prompt" && !isClickMode) {
+      const granted = await requestPermission();
+      if (granted) {
+        startListening();
+      }
+    }
+    // Click mode fallback
+    if (isClickMode || permissionState === "unsupported" || permissionState === "denied") {
+      clickShake.triggerClick();
     }
   };
 
   const handleMouseDown = () => {
-    if (shake.isClickMode || shake.permissionState === "unsupported") {
+    if (isClickMode || permissionState === "unsupported" || permissionState === "denied") {
       clickShake.startClickHold();
     }
   };
 
   const handleMouseUp = () => {
-    if (shake.isClickMode || shake.permissionState === "unsupported") {
+    if (isClickMode || permissionState === "unsupported" || permissionState === "denied") {
       clickShake.stopClickHold();
     }
   };
@@ -464,7 +477,7 @@ function ShakeInterface({
                 <>
                   <Smartphone className="w-8 h-8 mb-1" />
                   <span className="text-xs font-medium">
-                    {shake.isClickMode || shake.permissionState === "unsupported"
+                    {isClickMode || permissionState === "unsupported"
                       ? "疯狂点击！"
                       : "摇一摇手机"}
                   </span>
@@ -473,7 +486,7 @@ function ShakeInterface({
             </button>
           </div>
           <p className="relative z-10 text-[rgba(255,255,255,0.6)] text-sm text-center mb-8 max-w-xs">
-            {shake.isClickMode || shake.permissionState === "unsupported"
+            {isClickMode || permissionState === "unsupported"
               ? "疯狂点击按钮！点击越快越用力，说明你越纠结"
               : "用力摇晃你的手机！摇得越猛，说明你越纠结"}
           </p>
@@ -954,79 +967,80 @@ export default function DecidePage() {
   }, []);
 
   return (
-    <div className="relative min-h-screen pt-20 pb-10">
+    <div className="relative min-h-screen pt-14 pb-10 overflow-hidden">
       <HttpsBanner />
+
+      {/* Fixed back button in top-left */}
+      <Link
+        href="/"
+        className="fixed top-[4.5rem] left-4 z-30 text-sm text-[rgba(255,255,255,0.5)] hover:text-white transition-colors cursor-pointer inline-flex items-center gap-1"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span>返回</span>
+      </Link>
 
       {/* Error toast */}
       {error && phase === "result" && (
-        <div className="fixed top-20 left-0 right-0 z-40 bg-[rgba(244,114,182,0.15)] border-b border-[rgba(244,114,182,0.3)] backdrop-blur-md px-4 py-3 text-center">
+        <div className="fixed top-14 left-0 right-0 z-40 bg-[rgba(244,114,182,0.15)] border-b border-[rgba(244,114,182,0.3)] backdrop-blur-md px-4 py-3 text-center">
           <p className="text-sm text-[#f472b6]">{error}</p>
         </div>
       )}
 
-      <div
-        className={`transition-all duration-500 ease-out ${
-          phase === "input" ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none absolute inset-0"
-        }`}
-      >
-        <div className="flex items-center justify-center min-h-[calc(100vh-8rem)]">
-          <DecisionInputForm onSubmit={handleSubmit} />
+      {phase === "input" && (
+        <div className="transition-all duration-500 ease-out">
+          <div className="flex items-center justify-center min-h-[calc(100vh-6rem)]">
+            <DecisionInputForm onSubmit={handleSubmit} />
+          </div>
         </div>
-      </div>
+      )}
 
-      <div
-        className={`transition-all duration-500 ease-out ${
-          phase === "shaking" ? "opacity-100 scale-100" : "opacity-0 scale-105 pointer-events-none absolute inset-0"
-        }`}
-      >
-        <ShakeInterface
-          dilemma={dilemma}
-          optionA={optionA}
-          optionB={optionB}
-          onReport={handleReport}
-          onAnalyze={handleAnalyze}
-        />
-      </div>
-
-      <div
-        className={`transition-all duration-500 ease-out ${
-          phase === "analyzing" ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none absolute inset-0"
-        }`}
-      >
-        <AnalyzingPhase />
-      </div>
-
-      <div
-        className={`transition-all duration-500 ease-out ${
-          phase === "result" ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none absolute inset-0"
-        }`}
-      >
-        {analysisResult && shakeStats ? (
-          <ResultPhase
-            result={analysisResult}
-            mock={isMock}
-            shakeStats={shakeStats}
+      {phase === "shaking" && (
+        <div className="transition-all duration-500 ease-out">
+          <ShakeInterface
             dilemma={dilemma}
             optionA={optionA}
             optionB={optionB}
-            onReset={handleReset}
+            onReport={handleReport}
+            onAnalyze={handleAnalyze}
           />
-        ) : error ? (
-          <div className="flex items-center justify-center min-h-[calc(100vh-8rem)]">
-            <div className="text-center">
-              <h1 className="text-2xl font-bold text-white mb-2">分析出错了</h1>
-              <p className="text-[rgba(255,255,255,0.6)] mb-6">{error}</p>
-              <button
-                onClick={handleReset}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-medium hover:opacity-90 transition-opacity cursor-pointer"
-              >
-                <RotateCcw className="w-4 h-4" />
-                <span>再来一次</span>
-              </button>
+        </div>
+      )}
+
+      {phase === "analyzing" && (
+        <div className="transition-all duration-500 ease-out">
+          <AnalyzingPhase />
+        </div>
+      )}
+
+      {phase === "result" && (
+        <div className="transition-all duration-500 ease-out">
+          {analysisResult && shakeStats ? (
+            <ResultPhase
+              result={analysisResult}
+              mock={isMock}
+              shakeStats={shakeStats}
+              dilemma={dilemma}
+              optionA={optionA}
+              optionB={optionB}
+              onReset={handleReset}
+            />
+          ) : error ? (
+            <div className="flex items-center justify-center min-h-[calc(100vh-6rem)]">
+              <div className="text-center">
+                <h1 className="text-2xl font-bold text-white mb-2">分析出错了</h1>
+                <p className="text-[rgba(255,255,255,0.6)] mb-6">{error}</p>
+                <button
+                  onClick={handleReset}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-medium hover:opacity-90 transition-opacity cursor-pointer"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>再来一次</span>
+                </button>
+              </div>
             </div>
-          </div>
-        ) : null}
-      </div>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

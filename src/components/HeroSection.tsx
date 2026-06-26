@@ -9,9 +9,9 @@ export function HeroSection() {
       <div className="max-w-[1100px] mx-auto flex flex-col items-center">
         {/* Tag */}
         <div className="fade-in inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[rgba(79,70,229,0.4)] bg-[rgba(79,70,229,0.1)] text-sm text-[rgba(255,255,255,0.7)] mb-8">
-          <span>TRAE AI 创造力大赛</span>
+          <span>AI 决策助手</span>
           <span className="text-[rgba(255,255,255,0.4)]">·</span>
-          <span>硬件交互赛道</span>
+          <span>手机摇一摇交互</span>
         </div>
 
         {/* Title */}

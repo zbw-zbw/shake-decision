@@ -24,11 +24,11 @@ export function FooterSection() {
         </div>
 
         <div className="mt-16 pt-8 text-center">
-          <p className="text-xs text-[rgba(255,255,255,0.35)] mb-1">
-            摇一摇决策器 · TRAE AI 创造力大赛 · 硬件交互赛道
+          <p className="text-xs text-[rgba(255,255,255,0.25)] mb-1">
+            摇一摇决策器 · AI 决策助手
           </p>
-          <p className="text-xs text-[rgba(255,255,255,0.25)]">
-            全程使用 TRAE IDE + TRAE Work 开发
+          <p className="text-xs text-[rgba(255,255,255,0.15)]">
+            用 AI 和手机陀螺仪，终结选择困难
           </p>
         </div>
       </div>

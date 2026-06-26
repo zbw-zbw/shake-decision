@@ -458,10 +458,10 @@ export default function HistoryPage() {
       {/* Footer */}
       <div className="max-w-[640px] mx-auto mt-12 pt-6 text-center safe-bottom">
         <p className="text-xs text-[rgba(255,255,255,0.25)] mb-0.5">
-          摇一摇决策器 · TRAE AI 创造力大赛 · 硬件交互赛道
+          摇一摇决策器 · AI 决策助手
         </p>
-        <p className="text-xs text-[rgba(255,255,255,0.2)]">
-          全程使用 TRAE IDE + TRAE Work 开发
+        <p className="text-xs text-[rgba(255,255,255,0.15)]">
+          用 AI 和手机陀螺仪，终结选择困难
         </p>
       </div>
     </div>

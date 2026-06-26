@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   },
   description:
     "基于手机陀螺仪+AI的决策辅助工具。摇晃手机，AI分析你纠结的根因并给出理性建议。不是随机选一个，而是帮你看清为什么纠结。",
-  keywords: ["决策", "AI", "摇一摇", "选择困难", "陀螺仪", "TRAE"],
+  keywords: ["决策", "AI", "摇一摇", "选择困难", "陀螺仪"],
   openGraph: {
     title: "摇一摇决策器 — 选择困难？摇一下就好",
     description: "摇晃手机，AI帮你终结选择困难症",
