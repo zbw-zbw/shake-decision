@@ -170,3 +170,55 @@ export function getUnratedCount(): number {
     (r) => now - r.timestamp > dayMs && (r.satisfaction == null || r.satisfaction === 0)
   ).length;
 }
+
+export interface ImportResult {
+  imported: number;
+  skipped: number;
+}
+
+export function exportDecisions(): string {
+  const records = getDecisions();
+  return JSON.stringify({ version: 1, records }, null, 2);
+}
+
+export function importDecisions(json: string, mode: "replace" | "merge" = "merge"): ImportResult {
+  const result: ImportResult = { imported: 0, skipped: 0 };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    throw new Error("文件格式错误，无法解析 JSON");
+  }
+
+  const rawRecords =
+    parsed && typeof parsed === "object" && "records" in parsed
+      ? (parsed as { records: unknown[] }).records
+      : Array.isArray(parsed)
+        ? parsed
+        : [];
+
+  if (!Array.isArray(rawRecords)) {
+    throw new Error("数据格式错误：未找到记录数组");
+  }
+
+  const validRecords = rawRecords
+    .map((item) => (validateRecord(item as DecisionRecord) ? (item as DecisionRecord) : null))
+    .filter(Boolean) as DecisionRecord[];
+
+  if (mode === "replace") {
+    writeStorage(validRecords);
+    result.imported = validRecords.length;
+    result.skipped = rawRecords.length - validRecords.length;
+    return result;
+  }
+
+  const existing = readStorage();
+  const existingIds = new Set(existing.map((r) => r.id));
+  const newRecords = validRecords.filter((r) => !existingIds.has(r.id));
+  const merged = [...newRecords, ...existing];
+  writeStorage(merged.slice(0, MAX_RECORDS));
+
+  result.imported = newRecords.length;
+  result.skipped = rawRecords.length - validRecords.length + (validRecords.length - newRecords.length);
+  return result;
+}

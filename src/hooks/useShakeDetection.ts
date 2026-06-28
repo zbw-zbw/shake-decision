@@ -19,6 +19,7 @@ export interface ShakeResult {
   peakIntensity: number;
   isClickMode: boolean;
   debugInfo: string;
+  preloadAudio: () => Promise<void>;
 }
 
 function getTangleLevel(intensity: number): { level: TangleLevel; label: string } {
@@ -31,31 +32,48 @@ function getTangleLevel(intensity: number): { level: TangleLevel; label: string 
 // Lazy-loaded AudioContext for shake sound effects (created on first use)
 let shakeAudioContext: AudioContext | null = null;
 
+function getAudioContext(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  const AudioContextClass =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext?: typeof AudioContext })
+      .webkitAudioContext;
+  if (!AudioContextClass) return null;
+  if (!shakeAudioContext) {
+    shakeAudioContext = new AudioContextClass();
+  }
+  return shakeAudioContext;
+}
+
+async function resumeAudioContext(): Promise<boolean> {
+  const ctx = getAudioContext();
+  if (!ctx) return false;
+  if (ctx.state === "suspended") {
+    try {
+      await ctx.resume();
+      return (ctx.state as AudioContext["state"]) === "running";
+    } catch {
+      return false;
+    }
+  }
+  return (ctx.state as AudioContext["state"]) === "running";
+}
+
 /**
  * Plays a short "ding" sound using the Web Audio API.
  * Higher intensity → higher frequency and louder volume.
  * Wrapped in try-catch so it silently fails on browsers that
  * require a user gesture or don't support Web Audio.
  */
-function playShakeSound(intensity: number) {
+async function playShakeSound(intensity: number) {
   try {
-    if (typeof window === "undefined") return;
-    const AudioContextClass =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext?: typeof AudioContext })
-        .webkitAudioContext;
-    if (!AudioContextClass) return;
+    const running = await resumeAudioContext();
+    if (!running) return;
+    const ctx = shakeAudioContext!;
 
-    if (!shakeAudioContext) {
-      shakeAudioContext = new AudioContextClass();
-    }
-    if (shakeAudioContext.state === "suspended") {
-      void shakeAudioContext.resume();
-    }
-
-    const now = shakeAudioContext.currentTime;
-    const osc = shakeAudioContext.createOscillator();
-    const gain = shakeAudioContext.createGain();
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
 
     // Clamp intensity to 0-100
     const clamped = Math.min(Math.max(intensity, 0), 100);
@@ -74,7 +92,7 @@ function playShakeSound(intensity: number) {
     gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
     osc.connect(gain);
-    gain.connect(shakeAudioContext.destination);
+    gain.connect(ctx.destination);
 
     osc.start(now);
     osc.stop(now + duration + 0.02);
@@ -102,6 +120,10 @@ export function useShakeDetection(): ShakeResult {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastAccRef = useRef({ x: 0, y: 0, z: 0 });
   const clickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const preloadAudio = useCallback(async () => {
+    await resumeAudioContext();
+  }, []);
 
   // Detect support and HTTPS
   useEffect(() => {
@@ -150,13 +172,17 @@ export function useShakeDetection(): ShakeResult {
 
   const handleMotion = useCallback(
     (event: DeviceMotionEvent) => {
-      // eslint-disable-next-line no-console
-      console.log("[devicemotion] listening=", listeningRef.current, "event=", event);
+      if (process.env.NODE_ENV === "development") {
+        // eslint-disable-next-line no-console
+        console.log("[devicemotion] listening=", listeningRef.current, "event=", event);
+      }
       if (!listeningRef.current) return;
 
       const acc = event.accelerationIncludingGravity;
-      // eslint-disable-next-line no-console
-      console.log("[devicemotion] acc=", acc);
+      if (process.env.NODE_ENV === "development") {
+        // eslint-disable-next-line no-console
+        console.log("[devicemotion] acc=", acc);
+      }
       if (!acc) {
         setDebugInfo("acc is null");
         return;
@@ -190,12 +216,13 @@ export function useShakeDetection(): ShakeResult {
         const intensity = calculateIntensity(deltaSum);
         setShakeIntensity(intensity);
         setIsShaking(true);
-        playShakeSound(intensity);
 
         if (intensity > peakIntensityRef.current) {
           peakIntensityRef.current = intensity;
           setPeakIntensity(intensity);
         }
+
+        void playShakeSound(intensity);
 
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         timeoutRef.current = setTimeout(() => {
@@ -239,8 +266,10 @@ export function useShakeDetection(): ShakeResult {
   }, []);
 
   const startListening = useCallback(() => {
-    // eslint-disable-next-line no-console
-    console.log("[useShakeDetection] startListening called, listening=", listeningRef.current);
+    if (process.env.NODE_ENV === "development") {
+      // eslint-disable-next-line no-console
+      console.log("[useShakeDetection] startListening called, listening=", listeningRef.current);
+    }
     listeningRef.current = true;
     setDebugInfo((prev) => `${prev} | startListening called`);
     try {
@@ -254,8 +283,10 @@ export function useShakeDetection(): ShakeResult {
   }, [handleMotion]);
 
   const stopListening = useCallback(() => {
-    // eslint-disable-next-line no-console
-    console.log("[useShakeDetection] stopListening called");
+    if (process.env.NODE_ENV === "development") {
+      // eslint-disable-next-line no-console
+      console.log("[useShakeDetection] stopListening called");
+    }
     listeningRef.current = false;
     try {
       window.removeEventListener("devicemotion", handleMotion);
@@ -276,12 +307,13 @@ export function useShakeDetection(): ShakeResult {
       const computedIntensity = intensity ?? Math.min(30 + shakeCountRef.current * 3, 95);
       setShakeIntensity(computedIntensity);
       setIsShaking(true);
-      playShakeSound(computedIntensity);
 
       if (computedIntensity > peakIntensityRef.current) {
         peakIntensityRef.current = computedIntensity;
         setPeakIntensity(computedIntensity);
       }
+
+      void playShakeSound(computedIntensity);
 
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       timeoutRef.current = setTimeout(() => {
@@ -329,6 +361,7 @@ export function useShakeDetection(): ShakeResult {
     peakIntensity,
     isClickMode,
     debugInfo,
+    preloadAudio,
   };
 }
 

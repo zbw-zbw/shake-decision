@@ -321,6 +321,7 @@ function ShakeInterface({
     peakIntensity: shakePeakVal,
     isShaking: shakeIsShaking,
     debugInfo: shakeDebugInfo,
+    preloadAudio,
   } = useShakeDetection();
 
   const [count, setCount] = useState(0);
@@ -420,14 +421,24 @@ function ShakeInterface({
   useEffect(() => {
     if (shakingPhase !== "shaking") return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space" || e.key === " ") {
-        e.preventDefault();
-        triggerClick();
-      }
+      if (e.code !== "Space" && e.key !== " ") return;
+      // Ignore space when typing in inputs/textareas or focusing buttons
+      const target = e.target as HTMLElement;
+      if (["INPUT", "TEXTAREA", "BUTTON", "SELECT"].includes(target.tagName)) return;
+      e.preventDefault();
+      triggerClick();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [shakingPhase, triggerClick]);
+
+  // Preload audio context on first user gesture in shaking phase
+  useEffect(() => {
+    if (shakingPhase !== "shaking") return;
+    const warmup = async () => preloadAudio();
+    window.addEventListener("pointerdown", warmup, { once: true });
+    return () => window.removeEventListener("pointerdown", warmup);
+  }, [shakingPhase, preloadAudio]);
 
   const bgOpacity = Math.min(0.05 + (intensity / 100) * 0.2, 0.25);
 
@@ -811,9 +822,10 @@ function ResultPhase({
       }
       const data = await response.json();
       onResultUpdate?.(data.result as AnalysisResult, !!data.mock);
+      setSaved(false); // new result not saved yet
       setRevealed(false);
       setTimeout(() => setRevealed(true), 800);
-      showToast("已换个角度为你分析", "success");
+      showToast("已换个角度为你分析，记得重新保存", "success");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "分析失败";
       showToast(message, "error");
