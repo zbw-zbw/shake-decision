@@ -327,10 +327,23 @@ function ShakeInterface({
   const [intensity, setIntensity] = useState(0);
   const [peak, setPeak] = useState(0);
   const [shakingPhase, setShakingPhase] = useState<"shaking" | "finished">("shaking");
+  const [pulseKey, setPulseKey] = useState(0);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listeningStartedRef = useRef(false);
 
+  const TARGET_SHAKES = 5;
+  const progress = Math.min(count / TARGET_SHAKES, 1);
+  const remaining = Math.max(TARGET_SHAKES - count, 0);
+
   const tangleInfo = getTangleInfo(peak);
+
+  // Vibration feedback on shake
+  const triggerHaptic = useCallback((intensityVal: number) => {
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      const duration = Math.min(50 + intensityVal * 2, 200);
+      navigator.vibrate(duration);
+    }
+  }, []);
 
   // Sync gyroscope data from hook into unified local state
   useEffect(() => {
@@ -338,12 +351,14 @@ function ShakeInterface({
       setCount(shakeCountVal);
       setIntensity(shakeIntensityVal);
       if (shakePeakVal > peak) setPeak(shakePeakVal);
+      setPulseKey((k) => k + 1);
+      triggerHaptic(shakeIntensityVal);
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       idleTimerRef.current = setTimeout(() => {
         setIntensity(0);
       }, 500);
     }
-  }, [shakeCountVal, shakeIntensityVal, shakePeakVal]);
+  }, [shakeCountVal, shakeIntensityVal, shakePeakVal, peak, triggerHaptic]);
 
   // Click-mode callback
   const handleClickShake = useCallback((computedIntensity: number) => {
@@ -351,13 +366,15 @@ function ShakeInterface({
       const nc = c + 1;
       setIntensity(computedIntensity);
       setPeak((p) => Math.max(p, computedIntensity));
+      setPulseKey((k) => k + 1);
+      triggerHaptic(computedIntensity);
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       idleTimerRef.current = setTimeout(() => {
         setIntensity(0);
       }, 500);
       return nc;
     });
-  }, []);
+  }, [triggerHaptic]);
 
   const clickShake = useClickShake(handleClickShake);
 
@@ -378,9 +395,15 @@ function ShakeInterface({
     };
   }, [stopListening]);
 
-  // Auto-finish after idle if enough shakes
+  // Auto-finish when target reached
   useEffect(() => {
     if (shakingPhase !== "shaking") return;
+    if (count >= TARGET_SHAKES) {
+      const t = setTimeout(() => {
+        setShakingPhase("finished");
+      }, 600);
+      return () => clearTimeout(t);
+    }
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     idleTimerRef.current = setTimeout(() => {
       if (count >= 2) {
@@ -452,62 +475,110 @@ function ShakeInterface({
 
       {shakingPhase === "shaking" ? (
         <>
-          <div className="relative z-10 mb-10 w-[160px] h-[160px] mx-auto">
-            <div className="absolute inset-[-50%] flex items-center justify-center pointer-events-none">
-              <div className="w-full h-full rounded-full border-2 border-[rgba(79,70,229,0.3)] animate-pulse-ring" />
+          {/* Progress ring around circle */}
+          <div className="relative z-10 mb-10 w-[200px] h-[200px] mx-auto">
+            {/* SVG progress ring */}
+            <svg className="absolute inset-0 -rotate-90 pointer-events-none" viewBox="0 0 200 200">
+              <circle
+                cx="100" cy="100" r="92"
+                fill="none"
+                stroke="rgba(255,255,255,0.08)"
+                strokeWidth="3"
+              />
+              <circle
+                cx="100" cy="100" r="92"
+                fill="none"
+                stroke="url(#progGrad)"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeDasharray={`${progress * 578} 578`}
+                className="transition-all duration-300"
+              />
+              <defs>
+                <linearGradient id="progGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#34d399" />
+                  <stop offset="50%" stopColor="#fbbf24" />
+                  <stop offset="100%" stopColor="#f472b6" />
+                </linearGradient>
+              </defs>
+            </svg>
+
+            {/* Pulse rings */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-[160px] h-[160px] rounded-full border-2 border-[rgba(79,70,229,0.3)] animate-pulse-ring" />
             </div>
-            <div className="absolute inset-[-50%] flex items-center justify-center pointer-events-none">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div
-                className="w-full h-full rounded-full border-2 border-[rgba(79,70,229,0.3)] animate-pulse-ring"
+                className="w-[160px] h-[160px] rounded-full border-2 border-[rgba(79,70,229,0.3)] animate-pulse-ring"
                 style={{ animationDelay: "0.6s" }}
               />
             </div>
-            <div className="absolute inset-[-50%] flex items-center justify-center pointer-events-none">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div
-                className="w-full h-full rounded-full border-2 border-[rgba(79,70,229,0.3)] animate-pulse-ring"
+                className="w-[160px] h-[160px] rounded-full border-2 border-[rgba(79,70,229,0.3)] animate-pulse-ring"
                 style={{ animationDelay: "1.2s" }}
               />
             </div>
-            <button
-              onClick={handleCircleClick}
-              onMouseDown={handleMouseDown}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              onTouchStart={(e) => { e.preventDefault(); handleMouseDown(); }}
-              onTouchEnd={handleMouseUp}
-              className="relative w-[160px] h-[160px] rounded-full flex flex-col items-center justify-center text-white transition-all duration-150 select-none outline-none cursor-pointer"
-              style={{
-                background: intensity > 0
-                  ? `linear-gradient(135deg, ${circleColor}, #7c3aed)`
-                  : "linear-gradient(135deg, #4f46e5, #7c3aed)",
-                transform: `scale(${circleScale})`,
-                boxShadow: intensity > 0
-                  ? `0 0 60px ${circleColor}60`
-                  : "0 0 40px rgba(79,70,229,0.3)",
-              }}
-            >
-              {intensity > 0 ? (
-                <>
-                  <span className="text-3xl font-bold">{intensity}%</span>
-                  <span className="text-sm mt-1"><TangleIcon level={tangleInfo.level} className="w-4 h-4" /></span>
-                </>
-              ) : (
-                <>
-                  <Smartphone className="w-8 h-8 mb-1" />
-                  <span className="text-xs font-medium">
-                    {isClickMode || permissionState === "unsupported"
-                      ? "疯狂点击！"
-                      : "摇一摇手机"}
-                  </span>
-                </>
-              )}
-            </button>
+
+            {/* Main circle button */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <button
+                key={pulseKey}
+                onClick={handleCircleClick}
+                onMouseDown={handleMouseDown}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                onTouchStart={(e) => { e.preventDefault(); handleMouseDown(); }}
+                onTouchEnd={handleMouseUp}
+                className="relative w-[160px] h-[160px] rounded-full flex flex-col items-center justify-center text-white transition-all duration-150 select-none outline-none cursor-pointer animate-shake-pulse"
+                style={{
+                  background: intensity > 0
+                    ? `linear-gradient(135deg, ${circleColor}, #7c3aed)`
+                    : "linear-gradient(135deg, #4f46e5, #7c3aed)",
+                  transform: `scale(${circleScale})`,
+                  boxShadow: intensity > 0
+                    ? `0 0 60px ${circleColor}80, 0 0 120px ${circleColor}40`
+                    : "0 0 40px rgba(79,70,229,0.3)",
+                }}
+              >
+                {intensity > 0 ? (
+                  <>
+                    <span className="text-3xl font-bold">{intensity}%</span>
+                    <span className="text-sm mt-1"><TangleIcon level={tangleInfo.level} className="w-4 h-4" /></span>
+                  </>
+                ) : count > 0 ? (
+                  <>
+                    <span className="text-3xl font-bold">{count}</span>
+                    <span className="text-xs mt-1 text-white/70">再摇 {remaining} 次</span>
+                  </>
+                ) : (
+                  <>
+                    <Smartphone className="w-8 h-8 mb-1" />
+                    <span className="text-xs font-medium">
+                      {isClickMode || permissionState === "unsupported"
+                        ? "点击开始"
+                        : "摇一摇手机"}
+                    </span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
-          <p className="relative z-10 text-[rgba(255,255,255,0.6)] text-sm text-center mb-8 max-w-xs">
-            {isClickMode || permissionState === "unsupported"
-              ? "疯狂点击按钮！点击越快越用力，说明你越纠结"
-              : "用力摇晃你的手机！摇得越猛，说明你越纠结"}
+
+          {/* Hint text */}
+          <p className="relative z-10 text-[rgba(255,255,255,0.6)] text-sm text-center mb-6 max-w-xs">
+            {count === 0
+              ? isClickMode || permissionState === "unsupported"
+                ? "点击中间的圆形按钮，连点 5 次"
+                : "用力摇晃手机，目标 5 次"
+              : count >= TARGET_SHAKES
+                ? "摇晃完成！正在生成报告..."
+                : isClickMode || permissionState === "unsupported"
+                  ? `已点 ${count} 次，还差 ${remaining} 次`
+                  : `已摇 ${count} 次，还差 ${remaining} 次`}
           </p>
+
+          {/* Intensity bar */}
           <div className="relative z-10 w-full max-w-[300px] sm:max-w-[400px] mb-4">
             <div className="flex justify-between text-xs text-[rgba(255,255,255,0.4)] mb-1.5">
               <span>不太纠结</span>
@@ -523,17 +594,16 @@ function ShakeInterface({
               />
             </div>
           </div>
-          <div className="relative z-10 text-center">
-            <p className="text-sm text-[rgba(255,255,255,0.6)] mb-3">
-              已摇 <span key={count} className="text-white font-bold text-lg inline-block animate-bounce-count">{count}</span> 次，再摇几下或点击停止
-            </p>
+
+          {/* Stop button */}
+          {count > 0 && count < TARGET_SHAKES && (
             <button
               onClick={() => setShakingPhase("finished")}
-              className="px-5 py-2 rounded-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.12)] text-sm text-[rgba(255,255,255,0.7)] hover:bg-[rgba(255,255,255,0.12)] hover:text-white transition-all duration-300 cursor-pointer"
+              className="relative z-10 px-5 py-2 rounded-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.12)] text-sm text-[rgba(255,255,255,0.7)] hover:bg-[rgba(255,255,255,0.12)] hover:text-white transition-all duration-300 cursor-pointer"
             >
-              停止摇晃
+              提前结束
             </button>
-          </div>
+          )}
 
           {/* Debug info */}
           <div className="relative z-10 mt-6 px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)] max-w-[90vw] sm:max-w-[400px]">
@@ -995,14 +1065,16 @@ export default function DecidePage() {
     <div className="relative min-h-screen pt-14 pb-10 overflow-hidden">
       <HttpsBanner />
 
-      {/* Fixed back button in top-left */}
-      <Link
-        href="/"
-        className="fixed top-[4.5rem] left-4 z-30 text-sm text-[rgba(255,255,255,0.5)] hover:text-white transition-colors cursor-pointer inline-flex items-center gap-1"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        <span>返回</span>
-      </Link>
+      {/* Fixed back button in top-left (hidden during shaking phase) */}
+      {phase !== "shaking" && (
+        <Link
+          href="/"
+          className="fixed top-[4.75rem] left-4 z-30 text-sm text-[rgba(255,255,255,0.5)] hover:text-white transition-colors cursor-pointer inline-flex items-center gap-1"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>返回</span>
+        </Link>
+      )}
 
       {/* Error toast */}
       {error && phase === "result" && (
