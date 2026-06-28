@@ -197,6 +197,17 @@ export async function POST(req: NextRequest) {
 
     const userPrompt = `用户纠结的事情：${body.dilemma}\n选项A：${body.optionA}\n选项B：${body.optionB}\n摇晃力度：${body.shakeIntensity}%（${body.tangleLevel}）\n摇晃次数：${body.shakeCount}次`;
 
+    // Check if user wants an alternative perspective analysis
+    const isAlternative =
+      (body as DecisionInput & { perspective?: string }).perspective ===
+      "alternative";
+
+    let systemPrompt = SYSTEM_PROMPT;
+    if (isAlternative) {
+      systemPrompt +=
+        "\n\n## 这次请从一个完全不同的角度分析，挑战你之前的推荐，考虑被推荐选项的缺点和未被推荐选项的优点";
+    }
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
 
@@ -205,10 +216,10 @@ export async function POST(req: NextRequest) {
         {
           model: "deepseek-chat",
           messages: [
-            { role: "system", content: SYSTEM_PROMPT },
+            { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
           ],
-          temperature: 0.7,
+          temperature: isAlternative ? 1.1 : 0.7,
           max_tokens: 800,
         },
         { signal: controller.signal }

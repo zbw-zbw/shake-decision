@@ -28,6 +28,61 @@ function getTangleLevel(intensity: number): { level: TangleLevel; label: string 
   return { level: "extreme", label: "极度纠结" };
 }
 
+// Lazy-loaded AudioContext for shake sound effects (created on first use)
+let shakeAudioContext: AudioContext | null = null;
+
+/**
+ * Plays a short "ding" sound using the Web Audio API.
+ * Higher intensity → higher frequency and louder volume.
+ * Wrapped in try-catch so it silently fails on browsers that
+ * require a user gesture or don't support Web Audio.
+ */
+function playShakeSound(intensity: number) {
+  try {
+    if (typeof window === "undefined") return;
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
+    if (!AudioContextClass) return;
+
+    if (!shakeAudioContext) {
+      shakeAudioContext = new AudioContextClass();
+    }
+    if (shakeAudioContext.state === "suspended") {
+      void shakeAudioContext.resume();
+    }
+
+    const now = shakeAudioContext.currentTime;
+    const osc = shakeAudioContext.createOscillator();
+    const gain = shakeAudioContext.createGain();
+
+    // Clamp intensity to 0-100
+    const clamped = Math.min(Math.max(intensity, 0), 100);
+    // intensity → frequency 800-1200Hz
+    const freq = 800 + (clamped / 100) * 400;
+    // intensity → volume 0.05-0.2
+    const volume = 0.05 + (clamped / 100) * 0.15;
+    // intensity → duration 50-100ms
+    const duration = 0.05 + (clamped / 100) * 0.05;
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq, now);
+
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(volume, now + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    osc.connect(gain);
+    gain.connect(shakeAudioContext.destination);
+
+    osc.start(now);
+    osc.stop(now + duration + 0.02);
+  } catch {
+    // Silent fail: some browsers require a user gesture before audio
+  }
+}
+
 export function useShakeDetection(): ShakeResult {
   const [isShaking, setIsShaking] = useState(false);
   const [shakeIntensity, setShakeIntensity] = useState(0);
@@ -135,6 +190,7 @@ export function useShakeDetection(): ShakeResult {
         const intensity = calculateIntensity(deltaSum);
         setShakeIntensity(intensity);
         setIsShaking(true);
+        playShakeSound(intensity);
 
         if (intensity > peakIntensityRef.current) {
           peakIntensityRef.current = intensity;
@@ -220,6 +276,7 @@ export function useShakeDetection(): ShakeResult {
       const computedIntensity = intensity ?? Math.min(30 + shakeCountRef.current * 3, 95);
       setShakeIntensity(computedIntensity);
       setIsShaking(true);
+      playShakeSound(computedIntensity);
 
       if (computedIntensity > peakIntensityRef.current) {
         peakIntensityRef.current = computedIntensity;

@@ -55,14 +55,6 @@ body::before {
 button,
 a,
 [role="button"],
-input[type="text"],
-input[type="email"],
-input[type="search"],
-input[type="tel"],
-input[type="url"],
-input[type="number"],
-textarea,
-select,
 label[for],
 summary {
   cursor: pointer;
@@ -71,6 +63,18 @@ summary {
 button:disabled,
 [aria-disabled="true"] {
   cursor: not-allowed;
+}
+
+/* Text inputs should use text cursor */
+input[type="text"],
+input[type="email"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+input[type="number"],
+textarea,
+select {
+  cursor: text;
 }
 
 button:active,

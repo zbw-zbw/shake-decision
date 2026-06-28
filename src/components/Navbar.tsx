@@ -21,17 +21,15 @@ export function Navbar() {
     setMenuOpen(false);
   }, [pathname]);
 
-  // Poll for unrated count every 2s
+  // Update unrated count on route change and storage events
   useEffect(() => {
-    const update = () => setUnratedCount(getUnratedCount());
-    update();
-    const id = setInterval(update, 2000);
-    const handler = () => update();
+    setUnratedCount(getUnratedCount());
+  }, [pathname]);
+
+  useEffect(() => {
+    const handler = () => setUnratedCount(getUnratedCount());
     window.addEventListener("storage", handler);
-    return () => {
-      clearInterval(id);
-      window.removeEventListener("storage", handler);
-    };
+    return () => window.removeEventListener("storage", handler);
   }, []);
 
   // Prevent body scroll when menu is open

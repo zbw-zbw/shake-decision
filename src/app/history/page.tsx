@@ -12,7 +12,7 @@ import {
 } from "@/lib/storage";
 import { DecisionRecord, DecisionStats } from "@/types/decision";
 import { useToast } from "@/components/Toast";
-import { Inbox, BarChart3, Activity, Target, Smile, Lightbulb, Smartphone, ArrowRight, ChevronDown, Check, Clock, Zap, Flame, Heart, Star, TrendingUp } from "lucide-react";
+import { Inbox, BarChart3, Activity, Target, Smile, Lightbulb, Smartphone, ArrowRight, ChevronDown, Check, Clock, Zap, Flame, Heart, Star, TrendingUp, Search, type LucideIcon } from "lucide-react";
 
 // Helpers
 const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
@@ -42,6 +42,14 @@ function getTangleDotColor(level: string): string {
   return "#f472b6";
 }
 
+function getTangleLabel(level: string): string {
+  if (level === "light") return "轻度";
+  if (level === "medium") return "中度";
+  if (level === "heavy") return "重度";
+  if (level === "extreme") return "极度";
+  return "-";
+}
+
 function getIntensityColor(intensity: number): string {
   if (intensity <= 30) return "#34d399";
   if (intensity <= 60) return "#fbbf24";
@@ -69,6 +77,14 @@ function SuggestionIcon({ name, className }: { name: string; className?: string 
 }
 
 // Stats Panel
+type StatItem = {
+  Icon: LucideIcon | null;
+  label: string;
+  value: string;
+  color: string;
+  dot?: boolean;
+};
+
 function StatsPanel({ stats }: { stats: DecisionStats }) {
   if (stats.totalDecisions === 0) return null;
 
@@ -77,7 +93,10 @@ function StatsPanel({ stats }: { stats: DecisionStats }) {
       ? Math.round((stats.satisfiedCount / stats.totalRated) * 100)
       : 0;
 
-  const items = [
+  const tangleLevel = stats.mostCommonTangleLevel;
+  const tangleColor = getTangleDotColor(tangleLevel);
+
+  const items: StatItem[] = [
     {
       Icon: BarChart3,
       label: "总决策",
@@ -102,16 +121,36 @@ function StatsPanel({ stats }: { stats: DecisionStats }) {
       value: stats.totalRated > 0 ? `${satisfactionRate}%` : "-",
       color: "#34d399",
     },
+    {
+      Icon: Flame,
+      label: "连续天数",
+      value: `${stats.streakDays} 天`,
+      color: "#fb923c",
+    },
+    {
+      Icon: null,
+      label: "常见纠结",
+      value: getTangleLabel(tangleLevel),
+      color: tangleColor,
+      dot: true,
+    },
   ];
 
   return (
     <div className="w-full max-w-[640px] mx-auto mb-8 animate-fade-in-up">
       <div className="bg-[rgba(255,255,255,0.06)] backdrop-blur-sm border border-[rgba(255,255,255,0.08)] rounded-2xl p-5 sm:p-6">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {items.map((item) => (
             <div key={item.label} className="text-center">
               <div className="flex justify-center mb-1">
-                <item.Icon className="w-6 h-6" style={{ color: item.color }} />
+                {item.dot ? (
+                  <span
+                    className="inline-block w-5 h-5 rounded-full"
+                    style={{ backgroundColor: item.color }}
+                  />
+                ) : (
+                  item.Icon && <item.Icon className="w-6 h-6" style={{ color: item.color }} />
+                )}
               </div>
               <div className="text-xl sm:text-2xl font-bold" style={{ color: item.color }}>
                 {item.value}
@@ -184,7 +223,7 @@ function DeleteConfirmPanel({
 }
 
 // Decision Card
-function DecisionCard({ record }: { record: DecisionRecord }) {
+function DecisionCard({ record, onDelete }: { record: DecisionRecord; onDelete: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -207,6 +246,7 @@ function DecisionCard({ record }: { record: DecisionRecord }) {
     setTimeout(() => {
       deleteDecision(id);
       setDeleteConfirm(false);
+      onDelete();
     }, 300);
   };
 
@@ -384,6 +424,7 @@ export default function HistoryPage() {
   const [records, setRecords] = useState<DecisionRecord[]>([]);
   const [stats, setStats] = useState<DecisionStats | null>(null);
   const [clearConfirm, setClearConfirm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const refresh = useCallback(() => {
     const data = getDecisions();
@@ -402,14 +443,23 @@ export default function HistoryPage() {
   // Group by date
   const grouped = useMemo(() => {
     const map = new Map<string, DecisionRecord[]>();
-    records.forEach((r) => {
+    const q = searchQuery.trim().toLowerCase();
+    const filtered = q
+      ? records.filter(
+          (r) =>
+            r.input.dilemma.toLowerCase().includes(q) ||
+            r.input.optionA.toLowerCase().includes(q) ||
+            r.input.optionB.toLowerCase().includes(q)
+        )
+      : records;
+    filtered.forEach((r) => {
       const key = getDateKey(r.timestamp);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(r);
     });
     // Sort keys descending
     return Array.from(map.entries()).sort(([a], [b]) => b.localeCompare(a));
-  }, [records]);
+  }, [records, searchQuery]);
 
   const handleClearAll = () => {
     clearAllDecisions();
@@ -430,6 +480,22 @@ export default function HistoryPage() {
       {/* Stats */}
       {stats && <StatsPanel stats={stats} />}
 
+      {/* Search box */}
+      {records.length > 0 && (
+        <div className="max-w-[640px] mx-auto mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[rgba(255,255,255,0.4)] pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="搜索决策..."
+              className="w-full bg-[rgba(255,255,255,0.06)] backdrop-blur-sm border border-[rgba(255,255,255,0.08)] rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-[rgba(255,255,255,0.4)] focus:outline-none focus:border-[rgba(255,255,255,0.2)] transition-colors cursor-text"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Clear all button */}
       {records.length > 0 && (
         <div className="max-w-[640px] mx-auto mb-6 flex justify-end">
@@ -445,6 +511,11 @@ export default function HistoryPage() {
       {/* Content */}
       {records.length === 0 ? (
         <EmptyState />
+      ) : searchQuery.trim() && grouped.length === 0 ? (
+        <div className="max-w-[640px] mx-auto py-16 text-center animate-fade-in-up">
+          <Search className="w-10 h-10 text-[rgba(255,255,255,0.2)] mx-auto mb-3" />
+          <p className="text-[rgba(255,255,255,0.5)] text-sm">没有找到匹配的决策</p>
+        </div>
       ) : (
         <div className="max-w-[640px] mx-auto space-y-6">
           {grouped.map(([dateKey, items]) => (
@@ -456,7 +527,7 @@ export default function HistoryPage() {
               {/* Cards */}
               <div className="space-y-3">
                 {items.map((record) => (
-                  <DecisionCard key={record.id} record={record} />
+                  <DecisionCard key={record.id} record={record} onDelete={refresh} />
                 ))}
               </div>
             </div>

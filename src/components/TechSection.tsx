@@ -5,7 +5,7 @@ import { Smartphone, Brain, Zap, Palette } from "lucide-react";
 const techStack = [
   { icon: Smartphone, label: "硬件接入：DeviceMotion API（陀螺仪 + 加速度计）" },
   { icon: Brain, label: "AI 分析：DeepSeek API（自然语言理解 + 心理倾向推断）" },
-  { icon: Zap, label: "前端框架：Next.js 14 + React + TypeScript" },
+  { icon: Zap, label: "前端框架：Next.js 16 + React 19 + TypeScript" },
   { icon: Palette, label: "UI 框架：Tailwind CSS + CSS Animation" },
 ];
 

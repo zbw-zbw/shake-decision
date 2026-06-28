@@ -307,7 +307,7 @@ function ShakeInterface({
   optionA: string;
   optionB: string;
   onReport: (stats: { shakeCount: number; peakIntensity: number; tangleLevel: TangleLevel }) => void;
-  onAnalyze: () => void;
+  onAnalyze: (stats: { shakeCount: number; peakIntensity: number; tangleLevel: TangleLevel }) => void;
 }) {
   const {
     permissionState,
@@ -377,6 +377,7 @@ function ShakeInterface({
   }, [triggerHaptic]);
 
   const clickShake = useClickShake(handleClickShake);
+  const { triggerClick } = clickShake;
 
   // Start listening when isSupported becomes true (not on mount when it's still false)
   useEffect(() => {
@@ -415,15 +416,29 @@ function ShakeInterface({
     };
   }, [count, shakingPhase]);
 
+  // PC space key to trigger a shake (only during shaking phase)
+  useEffect(() => {
+    if (shakingPhase !== "shaking") return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === "Space" || e.key === " ") {
+        e.preventDefault();
+        triggerClick();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [shakingPhase, triggerClick]);
+
   const bgOpacity = Math.min(0.05 + (intensity / 100) * 0.2, 0.25);
 
   const handleFinish = () => {
-    onReport({
+    const stats = {
       shakeCount: count,
       peakIntensity: peak,
       tangleLevel: tangleInfo.level,
-    });
-    onAnalyze();
+    };
+    onReport(stats);
+    onAnalyze(stats);
   };
 
   const handleCircleClick = async () => {
@@ -569,8 +584,8 @@ function ShakeInterface({
           <p className="relative z-10 text-[rgba(255,255,255,0.6)] text-sm text-center mb-6 max-w-xs">
             {count === 0
               ? isClickMode || permissionState === "unsupported"
-                ? "点击中间的圆形按钮，连点 5 次"
-                : "用力摇晃手机，目标 5 次"
+                ? "点击中间的圆形按钮，连点 5 次（或按空格键）"
+                : "用力摇晃手机，目标 5 次（或按空格键）"
               : count >= TARGET_SHAKES
                 ? "摇晃完成！正在生成报告..."
                 : isClickMode || permissionState === "unsupported"
@@ -605,12 +620,14 @@ function ShakeInterface({
             </button>
           )}
 
-          {/* Debug info */}
-          <div className="relative z-10 mt-6 px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)] max-w-[90vw] sm:max-w-[400px]">
-            <p className="text-[10px] text-[rgba(255,255,255,0.35)] font-mono break-all">
-              调试：{shakeDebugInfo}
-            </p>
-          </div>
+          {/* Debug info - only in development */}
+          {process.env.NODE_ENV === "development" && (
+            <div className="relative z-10 mt-6 px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)] max-w-[90vw] sm:max-w-[400px]">
+              <p className="text-[10px] text-[rgba(255,255,255,0.35)] font-mono break-all">
+                调试：{shakeDebugInfo}
+              </p>
+            </div>
+          )}
         </>
       ) : (
         <div className="relative z-10 w-full max-w-[380px] animate-fade-in-up">
@@ -704,6 +721,7 @@ function ResultPhase({
   optionA,
   optionB,
   onReset,
+  onResultUpdate,
 }: {
   result: AnalysisResult;
   mock: boolean;
@@ -712,10 +730,12 @@ function ResultPhase({
   optionA: string;
   optionB: string;
   onReset: () => void;
+  onResultUpdate?: (result: AnalysisResult, mock: boolean) => void;
 }) {
   const [revealed, setRevealed] = useState(false);
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [alternativeLoading, setAlternativeLoading] = useState(false);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -751,6 +771,7 @@ function ResultPhase({
         await navigator.share({
           title: "摇一摇决策器 — AI帮我做了个决定",
           text: shareText,
+          url: window.location.href,
         });
       } catch {
         // user cancelled share
@@ -764,6 +785,40 @@ function ResultPhase({
       } catch {
         showToast("复制失败，请手动复制", "error");
       }
+    }
+  };
+
+  const handleAlternative = async () => {
+    if (alternativeLoading) return;
+    setAlternativeLoading(true);
+    try {
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dilemma,
+          optionA,
+          optionB,
+          shakeIntensity: shakeStats.peakIntensity,
+          shakeCount: shakeStats.shakeCount,
+          tangleLevel: shakeStats.tangleLevel,
+          perspective: "alternative",
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `请求失败: ${response.status}`);
+      }
+      const data = await response.json();
+      onResultUpdate?.(data.result as AnalysisResult, !!data.mock);
+      setRevealed(false);
+      setTimeout(() => setRevealed(true), 800);
+      showToast("已换个角度为你分析", "success");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "分析失败";
+      showToast(message, "error");
+    } finally {
+      setAlternativeLoading(false);
     }
   };
 
@@ -925,55 +980,69 @@ function ResultPhase({
             )}
 
             {/* Actions */}
-            <div className="flex flex-col sm:flex-row gap-3 pb-8">
+            <div className="pb-8">
               <button
-                onClick={onReset}
-                className="flex-1 py-3 px-6 rounded-xl border border-[rgba(255,255,255,0.15)] text-white font-medium hover:bg-[rgba(255,255,255,0.06)] transition-all duration-300 cursor-pointer flex items-center justify-center gap-2"
-              >
-                <RotateCcw className="w-4 h-4" />
-                <span>再来一次</span>
-              </button>
-              <button
-                onClick={handleShare}
-                className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 ${
-                  copied
-                    ? "bg-[rgba(56,189,248,0.15)] border border-[rgba(56,189,248,0.3)] text-[#38bdf8]"
-                    : "border border-[rgba(255,255,255,0.15)] text-white hover:bg-[rgba(255,255,255,0.06)]"
+                onClick={handleAlternative}
+                disabled={alternativeLoading}
+                className={`w-full py-3 px-6 rounded-xl font-medium transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 mb-3 ${
+                  alternativeLoading
+                    ? "bg-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.5)] cursor-not-allowed"
+                    : "bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] text-white hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
                 }`}
               >
-                {copied ? (
-                  <>
-                    <Check className="w-4 h-4 text-[#34d399]" />
-                    <span>已复制</span>
-                  </>
-                ) : (
-                  <>
-                    <Link2 className="w-4 h-4" />
-                    <span>分享给朋友</span>
-                  </>
-                )}
+                <Sparkles className="w-4 h-4" />
+                <span>{alternativeLoading ? "分析中..." : "换个角度分析"}</span>
               </button>
-              <button
-                onClick={handleSave}
-                disabled={saved}
-                className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 ${
-                  saved
-                    ? "bg-[rgba(52,211,153,0.15)] border border-[rgba(52,211,153,0.3)] text-[#34d399]"
-                    : "bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white hover:shadow-lg"
-                }`}
-              >
-                {saved ? (
-                  <>
-                    <Check className="w-4 h-4 text-[#34d399]" />
-                    <span>已保存</span>
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4" />
-                    <span>保存到决策日记</span>
-                  </>
-                )}
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={onReset}
+                  className="flex-1 py-3 px-6 rounded-xl border border-[rgba(255,255,255,0.15)] text-white font-medium hover:bg-[rgba(255,255,255,0.06)] transition-all duration-300 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>再来一次</span>
+                </button>
+                <button
+                  onClick={handleShare}
+                  className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 ${
+                    copied
+                      ? "bg-[rgba(56,189,248,0.15)] border border-[rgba(56,189,248,0.3)] text-[#38bdf8]"
+                      : "border border-[rgba(255,255,255,0.15)] text-white hover:bg-[rgba(255,255,255,0.06)]"
+                  }`}
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-4 h-4 text-[#34d399]" />
+                      <span>已复制</span>
+                    </>
+                  ) : (
+                    <>
+                      <Link2 className="w-4 h-4" />
+                      <span>分享给朋友</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saved}
+                  className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 ${
+                    saved
+                      ? "bg-[rgba(52,211,153,0.15)] border border-[rgba(52,211,153,0.3)] text-[#34d399]"
+                      : "bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white hover:shadow-lg"
+                  }`}
+                >
+                  {saved ? (
+                    <>
+                      <Check className="w-4 h-4 text-[#34d399]" />
+                      <span>已保存</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>保存到决策日记</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1014,8 +1083,9 @@ export default function DecidePage() {
     []
   );
 
-  const handleAnalyze = useCallback(async () => {
-    if (!shakeStats) return;
+  const handleAnalyze = useCallback(async (stats?: { shakeCount: number; peakIntensity: number; tangleLevel: TangleLevel }) => {
+    const effectiveStats = stats ?? shakeStats;
+    if (!effectiveStats) return;
     setPhase("analyzing");
     setError(null);
 
@@ -1027,9 +1097,9 @@ export default function DecidePage() {
           dilemma,
           optionA,
           optionB,
-          shakeIntensity: shakeStats.peakIntensity,
-          shakeCount: shakeStats.shakeCount,
-          tangleLevel: shakeStats.tangleLevel,
+          shakeIntensity: effectiveStats.peakIntensity,
+          shakeCount: effectiveStats.shakeCount,
+          tangleLevel: effectiveStats.tangleLevel,
         }),
       });
 
@@ -1048,6 +1118,14 @@ export default function DecidePage() {
       setPhase("result");
     }
   }, [dilemma, optionA, optionB, shakeStats]);
+
+  const handleResultUpdate = useCallback(
+    (newResult: AnalysisResult, mock: boolean) => {
+      setAnalysisResult(newResult);
+      setIsMock(mock);
+    },
+    []
+  );
 
   const handleReset = useCallback(() => {
     setDilemma("");
@@ -1120,6 +1198,7 @@ export default function DecidePage() {
               optionA={optionA}
               optionB={optionB}
               onReset={handleReset}
+              onResultUpdate={handleResultUpdate}
             />
           ) : error ? (
             <div className="flex items-center justify-center min-h-[calc(100vh-6rem)]">
