@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Smartphone, ChevronDown } from "lucide-react";
+import { Smartphone } from "lucide-react";
 
 export function HeroSection() {
   return (
-    <section className="relative w-full pt-32 pb-16 px-4 sm:px-6 text-center overflow-hidden">
+    <section className="relative w-full pt-24 sm:pt-32 pb-12 sm:pb-16 px-4 sm:px-6 text-center overflow-hidden">
       <div className="max-w-[1100px] mx-auto flex flex-col items-center">
         {/* Tag */}
         <div className="fade-in inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[rgba(79,70,229,0.4)] bg-[rgba(79,70,229,0.1)] text-sm text-[rgba(255,255,255,0.7)] mb-8">
@@ -53,12 +53,6 @@ export function HeroSection() {
             <Smartphone className="w-6 h-6 mb-1" />
             <span className="text-sm font-medium">摇一摇</span>
           </Link>
-        </div>
-
-        {/* Scroll down */}
-        <div className="fade-in flex flex-col items-center text-[rgba(255,255,255,0.4)] text-sm" style={{ animationDelay: "0.6s" }}>
-          <span className="mb-2">看看怎么用</span>
-          <ChevronDown className="w-5 h-5 animate-bounce-down" />
         </div>
       </div>
     </section>

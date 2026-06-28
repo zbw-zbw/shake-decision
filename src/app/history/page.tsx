@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, type ComponentType } from "react";
 import Link from "next/link";
 import {
   getDecisions,
@@ -12,9 +12,9 @@ import {
 } from "@/lib/storage";
 import { DecisionRecord, DecisionStats } from "@/types/decision";
 import { useToast } from "@/components/Toast";
-import { Inbox, BarChart3, Activity, Target, Smile, Lightbulb, Smartphone } from "lucide-react";
+import { Inbox, BarChart3, Activity, Target, Smile, Lightbulb, Smartphone, ArrowRight, ChevronDown, Check, Clock, Zap, Flame, Heart, Star, TrendingUp } from "lucide-react";
 
-// ─── Helpers ───
+// Helpers
 const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 
 function formatDate(ts: number): string {
@@ -51,7 +51,24 @@ function getIntensityColor(intensity: number): string {
 
 const SATISFACTION_LABELS = ["1分", "2分", "3分", "4分", "5分"];
 
-// ─── Stats Panel ───
+const SUGGESTION_ICONS: Record<string, ComponentType<{ className?: string }>> = {
+  check: Check,
+  clock: Clock,
+  lightbulb: Lightbulb,
+  target: Target,
+  zap: Zap,
+  flame: Flame,
+  heart: Heart,
+  star: Star,
+  trending: TrendingUp,
+};
+
+function SuggestionIcon({ name, className }: { name: string; className?: string }) {
+  const Icon = SUGGESTION_ICONS[name] || Lightbulb;
+  return <Icon className={className} />;
+}
+
+// Stats Panel
 function StatsPanel({ stats }: { stats: DecisionStats }) {
   if (stats.totalDecisions === 0) return null;
 
@@ -108,7 +125,7 @@ function StatsPanel({ stats }: { stats: DecisionStats }) {
   );
 }
 
-// ─── Empty State ───
+// Empty State
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-20 animate-fade-in-up">
@@ -122,13 +139,13 @@ function EmptyState() {
         className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-medium hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer"
       >
         <span>开始决策</span>
-        <span>→</span>
+        <ArrowRight className="w-4 h-4" />
       </Link>
     </div>
   );
 }
 
-// ─── Delete Confirm Panel ───
+// Delete Confirm Panel
 function DeleteConfirmPanel({
   onConfirm,
   onCancel,
@@ -166,7 +183,7 @@ function DeleteConfirmPanel({
   );
 }
 
-// ─── Decision Card ───
+// Decision Card
 function DecisionCard({ record }: { record: DecisionRecord }) {
   const [expanded, setExpanded] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -283,7 +300,7 @@ function DecisionCard({ record }: { record: DecisionRecord }) {
               className="text-xs text-[rgba(255,255,255,0.5)] hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
             >
               <span>{expanded ? "收起详情" : "查看详情"}</span>
-              <span className={`transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}>▾</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />
             </button>
             <button
               onClick={() => setDeleteConfirm(true)}
@@ -330,7 +347,7 @@ function DecisionCard({ record }: { record: DecisionRecord }) {
                     key={i}
                     className="flex items-start gap-2.5 bg-[rgba(255,255,255,0.03)] rounded-lg px-3 py-2"
                   >
-                    <span className="text-base shrink-0">{s.icon}</span>
+                    <span className="text-base shrink-0"><SuggestionIcon name={s.icon} className="w-4 h-4 text-[rgba(255,255,255,0.7)]" /></span>
                     <p className="text-sm text-[rgba(255,255,255,0.65)] leading-relaxed">{s.text}</p>
                   </div>
                 ))}
@@ -362,7 +379,7 @@ function DecisionCard({ record }: { record: DecisionRecord }) {
   );
 }
 
-// ─── Main Page ───
+// Main Page
 export default function HistoryPage() {
   const [records, setRecords] = useState<DecisionRecord[]>([]);
   const [stats, setStats] = useState<DecisionStats | null>(null);

@@ -51,23 +51,41 @@ body::before {
     radial-gradient(ellipse at 50% 90%, rgba(56, 189, 248, 0.05) 0%, transparent 40%);
 }
 
-/* ─── Global micro-interactions ─── */
-a, button, [role="button"] {
+/* Global pointer styles for clickable elements */
+button,
+a,
+[role="button"],
+input[type="text"],
+input[type="email"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+input[type="number"],
+textarea,
+select,
+label[for],
+summary {
   cursor: pointer;
 }
 
-button:active, a:active {
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+button:active,
+a:active {
   transform: scale(0.98);
 }
 
-/* ─── Safe area for mobile ─── */
+/* Safe area for mobile */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
 
-/* ─── Keyframes (GPU-accelerated only: transform + opacity) ─── */
+/* Keyframes (GPU-accelerated only: transform + opacity) */
 @keyframes shake-title {
   0%, 100% { transform: rotate(0deg); }
   25% { transform: rotate(-2deg); }
@@ -107,17 +125,12 @@ button:active, a:active {
   100% { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes bounce-down {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(8px); }
-}
-
 @keyframes spin-slow {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
 
-/* ─── Animation utilities ─── */
+/* Animation utilities */
 .animate-shake-title {
   animation: shake-title 3s ease-in-out infinite;
   will-change: transform;
@@ -152,12 +165,7 @@ button:active, a:active {
   will-change: transform, opacity;
 }
 
-.animate-bounce-down {
-  animation: bounce-down 2s ease-in-out infinite;
-  will-change: transform;
-}
-
-/* ─── Fade-in for Intersection Observer ─── */
+/* Fade-in for Intersection Observer */
 .fade-in {
   opacity: 0;
   transform: translateY(30px);
@@ -170,7 +178,7 @@ button:active, a:active {
   transform: translateY(0);
 }
 
-/* ─── Gradient text utility ─── */
+/* Gradient text utility */
 .text-gradient {
   background: linear-gradient(135deg, #4f46e5, #fbbf24);
   -webkit-background-clip: text;
@@ -178,7 +186,7 @@ button:active, a:active {
   background-clip: text;
 }
 
-/* ─── Toast animation ─── */
+/* Toast animation */
 @keyframes toast-in {
   0% { opacity: 0; transform: translateX(100%); }
   100% { opacity: 1; transform: translateX(0); }
@@ -195,7 +203,7 @@ button:active, a:active {
   animation: toast-in 0.3s ease-out forwards;
 }
 
-/* ─── Slide-up for confirm panels ─── */
+/* Slide-up for confirm panels */
 @keyframes slide-up {
   0% { opacity: 0; transform: translateY(100%); }
   100% { opacity: 1; transform: translateY(0); }
@@ -212,7 +220,7 @@ button:active, a:active {
   animation: slide-up 0.25s ease-out forwards;
 }
 
-/* ─── Reduced motion support ─── */
+/* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -223,7 +231,7 @@ button:active, a:active {
   }
 }
 
-/* ─── Scrollbar styling ─── */
+/* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
 }

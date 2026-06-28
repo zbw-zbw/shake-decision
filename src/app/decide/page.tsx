@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, type ComponentType } from "react";
 import Link from "next/link";
 import {
   useShakeDetection,
@@ -13,13 +13,13 @@ import { useToast } from "@/components/Toast";
 import {
   Smartphone, ArrowLeft, Sparkles, Save, RotateCcw, Link2,
   Check, Clock, Lightbulb, Search, BarChart3, Zap, CheckCircle2,
-  MessageSquare, Flame, ArrowRight, Target
+  MessageSquare, Flame, ArrowRight, Target, X, Heart, Star, TrendingUp
 } from "lucide-react";
 
-// ─── Types ───
+// Types
 type Phase = "input" | "shaking" | "analyzing" | "result";
 
-// ─── Quick Templates ───
+// Quick Templates
 const templates = [
   {
     icon: "utensils",
@@ -51,7 +51,7 @@ const loadingMessages = [
   "正在生成决策建议...",
 ];
 
-// ─── Helpers ───
+// Helpers
 function getTangleInfo(intensity: number) {
   if (intensity <= 30) return { level: "light" as TangleLevel, label: "轻度纠结" };
   if (intensity <= 60) return { level: "medium" as TangleLevel, label: "中度纠结" };
@@ -81,7 +81,24 @@ function getConfidenceColor(confidence: number): string {
   return "#fb923c";
 }
 
-// ─── HTTPS Banner ───
+const SUGGESTION_ICONS: Record<string, ComponentType<{ className?: string }>> = {
+  check: Check,
+  clock: Clock,
+  lightbulb: Lightbulb,
+  target: Target,
+  zap: Zap,
+  flame: Flame,
+  heart: Heart,
+  star: Star,
+  trending: TrendingUp,
+};
+
+function SuggestionIcon({ name, className }: { name: string; className?: string }) {
+  const Icon = SUGGESTION_ICONS[name] || Lightbulb;
+  return <Icon className={className} />;
+}
+
+// HTTPS Banner
 function HttpsBanner() {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -94,23 +111,23 @@ function HttpsBanner() {
   }, []);
   if (!visible) return null;
   return (
-    <div className="fixed top-16 left-0 right-0 z-40 bg-[rgba(251,191,36,0.15)] border-b border-[rgba(251,191,36,0.3)] backdrop-blur-md px-4 py-3 flex items-center justify-between">
+    <div className="fixed top-16 left-0 right-0 z-40 bg-[rgba(251,191,36,0.15)] backdrop-blur-md px-4 py-3 flex items-center justify-between">
       <p className="text-sm text-[#fbbf24] flex items-center gap-1.5">
         <Smartphone className="w-4 h-4" />
         <span>陀螺仪需要 HTTPS 环境。当前使用点击模式代替，部署到 Vercel 后即可体验完整摇一摇功能。</span>
       </p>
       <button
         onClick={() => setVisible(false)}
-        className="text-[#fbbf24] hover:text-white text-lg leading-none shrink-0 ml-4 cursor-pointer"
+        className="text-[#fbbf24] hover:text-white shrink-0 ml-4 cursor-pointer"
         aria-label="关闭提示"
       >
-        ×
+        <X className="w-4 h-4" />
       </button>
     </div>
   );
 }
 
-// ─── Input Form ───
+// Input Form
 function DecisionInputForm({
   onSubmit,
 }: {
@@ -241,7 +258,7 @@ function DecisionInputForm({
 
           <div className="mb-8">
             <p className="text-xs text-[rgba(255,255,255,0.4)] mb-3">
-              或者试试快速模板 ↓
+              或者试试快速模板
             </p>
             <div className="flex flex-wrap gap-2">
               {templates.map((t) => (
@@ -278,7 +295,7 @@ function DecisionInputForm({
   );
 }
 
-// ─── Shake Interface ───
+// Shake Interface
 function ShakeInterface({
   dilemma,
   optionA,
@@ -311,7 +328,7 @@ function ShakeInterface({
   const [peak, setPeak] = useState(0);
   const [shakingPhase, setShakingPhase] = useState<"shaking" | "finished">("shaking");
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const mountedRef = useRef(false);
+  const listeningStartedRef = useRef(false);
 
   const tangleInfo = getTangleInfo(peak);
 
@@ -344,14 +361,14 @@ function ShakeInterface({
 
   const clickShake = useClickShake(handleClickShake);
 
-  // Mount: try to start listening once (for Android and click mode this is safe)
+  // Start listening when isSupported becomes true (not on mount when it's still false)
   useEffect(() => {
-    if (mountedRef.current) return;
-    mountedRef.current = true;
-    if (isSupported) {
+    if (listeningStartedRef.current) return;
+    if (isSupported && (permissionState === "granted" || permissionState === "prompt")) {
+      listeningStartedRef.current = true;
       startListening();
     }
-  }, [isSupported, startListening]);
+  }, [isSupported, permissionState, startListening]);
 
   // Unmount cleanup
   useEffect(() => {
@@ -560,7 +577,7 @@ function ShakeInterface({
   );
 }
 
-// ─── Analyzing Phase ───
+// Analyzing Phase
 function AnalyzingPhase() {
   const [messageIndex, setMessageIndex] = useState(0);
 
@@ -608,7 +625,7 @@ function AnalyzingPhase() {
   );
 }
 
-// ─── Result Phase ───
+// Result Phase
 function ResultPhase({
   result,
   mock,
@@ -780,7 +797,7 @@ function ResultPhase({
                     className="flex items-start gap-3 bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.06)] rounded-xl px-4 py-3 animate-fade-in-up"
                     style={{ animationDelay: `${0.45 + i * 0.1}s` }}
                   >
-                    <span className="text-lg shrink-0">{s.icon}</span>
+                    <span className="text-lg shrink-0"><SuggestionIcon name={s.icon} className="w-4 h-4 text-[rgba(255,255,255,0.8)]" /></span>
                     <p className="text-sm text-[rgba(255,255,255,0.7)] leading-relaxed">{s.text}</p>
                   </div>
                 ))}
@@ -895,7 +912,7 @@ function ResultPhase({
   );
 }
 
-// ─── Main Page ───
+// Main Page
 export default function DecidePage() {
   const [phase, setPhase] = useState<Phase>("input");
   const [dilemma, setDilemma] = useState("");
@@ -989,7 +1006,7 @@ export default function DecidePage() {
 
       {/* Error toast */}
       {error && phase === "result" && (
-        <div className="fixed top-14 left-0 right-0 z-40 bg-[rgba(244,114,182,0.15)] border-b border-[rgba(244,114,182,0.3)] backdrop-blur-md px-4 py-3 text-center">
+        <div className="fixed top-14 left-0 right-0 z-40 bg-[rgba(244,114,182,0.15)] backdrop-blur-md px-4 py-3 text-center">
           <p className="text-sm text-[#f472b6]">{error}</p>
         </div>
       )}
