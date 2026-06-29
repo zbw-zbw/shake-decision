@@ -14,7 +14,7 @@ import {
 } from "@/lib/storage";
 import { DecisionRecord, DecisionStats } from "@/types/decision";
 import { useToast } from "@/components/Toast";
-import { Inbox, BarChart3, Activity, Target, Smile, Lightbulb, Smartphone, ArrowRight, ChevronDown, Check, Clock, Zap, Flame, Heart, Star, TrendingUp, Search, X, Download, Upload, type LucideIcon } from "lucide-react";
+import { Inbox, BarChart3, Activity, Target, Smile, Lightbulb, Smartphone, ArrowRight, ChevronDown, Check, Clock, Zap, Flame, Heart, Star, TrendingUp, Search, X, Download, Upload, type LucideIcon, Utensils, ShoppingBag, Home, Briefcase, Book, Car, Dumbbell, Plane, Moon } from "lucide-react";
 
 // Helpers
 const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
@@ -71,6 +71,15 @@ const SUGGESTION_ICONS: Record<string, ComponentType<{ className?: string }>> = 
   heart: Heart,
   star: Star,
   trending: TrendingUp,
+  utensils: Utensils,
+  shopping: ShoppingBag,
+  home: Home,
+  briefcase: Briefcase,
+  book: Book,
+  car: Car,
+  dumbbell: Dumbbell,
+  plane: Plane,
+  moon: Moon,
 };
 
 function SuggestionIcon({ name, className }: { name: string; className?: string }) {
@@ -231,6 +240,8 @@ function DecisionCard({ record, onDelete }: { record: DecisionRecord; onDelete: 
   const [expanded, setExpanded] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [hoverRating, setHoverRating] = useState<number | null>(null);
+  const [ratingAnimation, setRatingAnimation] = useState<number | null>(null);
   const { showToast } = useToast();
 
   const { input, result, id, timestamp, satisfaction } = record;
@@ -242,6 +253,8 @@ function DecisionCard({ record, onDelete }: { record: DecisionRecord; onDelete: 
 
   const handleRate = (score: number) => {
     updateSatisfaction(id, score);
+    setRatingAnimation(score);
+    setTimeout(() => setRatingAnimation(null), 300);
     showToast("感谢你的反馈！", "success", 2000);
   };
 
@@ -308,25 +321,41 @@ function DecisionCard({ record, onDelete }: { record: DecisionRecord; onDelete: 
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xs text-[rgba(255,255,255,0.5)]">这个决定让你满意吗？</span>
               </div>
-              <div className="flex items-center gap-1">
-                {SATISFACTION_LABELS.map((label, i) => {
-                  const score = i + 1;
-                  const isSelected = satisfaction === score;
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => handleRate(score)}
-                      className={`text-xs font-medium transition-all duration-200 px-2 py-1 rounded-lg cursor-pointer ${
-                        isSelected
-                          ? "bg-[rgba(255,255,255,0.1)] scale-110 text-white"
-                          : "hover:bg-[rgba(255,255,255,0.05)] hover:scale-105 text-[rgba(255,255,255,0.5)]"
-                      }`}
-                      title={`${score}分`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
+              <div className="flex flex-col items-center gap-1.5">
+                <div className="flex items-center gap-1.5">
+                  {[1, 2, 3, 4, 5].map((score) => {
+                    const isSelected = satisfaction === score;
+                    const isHovered = hoverRating != null && hoverRating >= score;
+                    const isFilled = isSelected || isHovered;
+                    const isAnimating = ratingAnimation === score;
+                    return (
+                      <button
+                        key={score}
+                        onClick={() => handleRate(score)}
+                        onMouseEnter={() => setHoverRating(score)}
+                        onMouseLeave={() => setHoverRating(null)}
+                        className="cursor-pointer transition-transform duration-150 outline-none"
+                        style={{
+                          transform: isAnimating ? "scale(1.35)" : isFilled ? "scale(1.1)" : "scale(1)",
+                        }}
+                        title={`${score}分`}
+                      >
+                        <Star
+                          className="w-6 h-6 transition-colors duration-150"
+                          style={{
+                            fill: isFilled ? "#fbbf24" : "none",
+                            stroke: isFilled ? "#fbbf24" : "rgba(255,255,255,0.35)",
+                            strokeWidth: 2,
+                            opacity: isHovered && !isSelected ? 0.7 : 1,
+                          }}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+                <span className="text-xs text-[rgba(255,255,255,0.45)]">
+                  {satisfaction ? SATISFACTION_LABELS[satisfaction - 1] : hoverRating ? SATISFACTION_LABELS[hoverRating - 1] : ""}
+                </span>
               </div>
             </div>
           ) : (

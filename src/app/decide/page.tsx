@@ -11,9 +11,10 @@ import { AnalysisResult } from "@/types/decision";
 import { saveDecision } from "@/lib/storage";
 import { useToast } from "@/components/Toast";
 import {
-  Smartphone, ArrowLeft, Sparkles, Save, RotateCcw, Link2,
+  Smartphone, ArrowLeft, Sparkles, RotateCcw, Link2,
   Check, Clock, Lightbulb, Search, BarChart3, Zap, CheckCircle2,
-  MessageSquare, Flame, ArrowRight, Target, X, Heart, Star, TrendingUp
+  MessageSquare, Flame, ArrowRight, Target, X, Heart, Star, TrendingUp, BookOpen,
+  Utensils, ShoppingBag, Home, Briefcase, Book, Car, Dumbbell, Plane, Moon
 } from "lucide-react";
 
 // Types
@@ -41,6 +42,55 @@ const templates = [
     dilemma: "周末出门还是宅家",
     optionA: "出门浪",
     optionB: "宅家躺",
+  },
+  {
+    icon: "briefcase",
+    label: "跳槽还是留下",
+    dilemma: "要不要换一份工作",
+    optionA: "跳槽",
+    optionB: "留下",
+  },
+  {
+    icon: "heart",
+    label: "表白还是暗恋",
+    dilemma: "要不要向喜欢的人表白",
+    optionA: "表白",
+    optionB: "继续暗恋",
+  },
+  {
+    icon: "book",
+    label: "考研还是工作",
+    dilemma: "毕业后考研还是直接工作",
+    optionA: "考研",
+    optionB: "工作",
+  },
+  {
+    icon: "car",
+    label: "买车还是打车",
+    dilemma: "要不要买一辆车",
+    optionA: "买车",
+    optionB: "继续打车",
+  },
+  {
+    icon: "dumbbell",
+    label: "健身还是躺平",
+    dilemma: "今天要不要去健身",
+    optionA: "去健身",
+    optionB: "躺着休息",
+  },
+  {
+    icon: "plane",
+    label: "旅游还是省钱",
+    dilemma: "要不要出去旅游",
+    optionA: "去旅游",
+    optionB: "在家省钱",
+  },
+  {
+    icon: "moon",
+    label: "早睡还是熬夜",
+    dilemma: "今晚要不要早睡",
+    optionA: "早睡",
+    optionB: "再玩一会儿",
   },
 ];
 
@@ -91,6 +141,15 @@ const SUGGESTION_ICONS: Record<string, ComponentType<{ className?: string }>> = 
   heart: Heart,
   star: Star,
   trending: TrendingUp,
+  utensils: Utensils,
+  shopping: ShoppingBag,
+  home: Home,
+  briefcase: Briefcase,
+  book: Book,
+  car: Car,
+  dumbbell: Dumbbell,
+  plane: Plane,
+  moon: Moon,
 };
 
 function SuggestionIcon({ name, className }: { name: string; className?: string }) {
@@ -271,6 +330,7 @@ function DecisionInputForm({
                       : "bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.7)] hover:bg-[rgba(255,255,255,0.10)] hover:border-[rgba(255,255,255,0.15)]"
                   }`}
                 >
+                  <SuggestionIcon name={t.icon} className="w-3 h-3" />
                   <span>{t.label}</span>
                 </button>
               ))}
@@ -482,7 +542,7 @@ function ShakeInterface({
   const circleColor = getIntensityColor(intensity);
 
   return (
-    <div className="relative w-full min-h-screen flex flex-col items-center justify-center px-4">
+    <div className="relative w-full min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center px-4">
       <div
         className="fixed inset-0 pointer-events-none transition-opacity duration-500"
         style={{
@@ -595,8 +655,8 @@ function ShakeInterface({
           <p className="relative z-10 text-[rgba(255,255,255,0.6)] text-sm text-center mb-6 max-w-xs">
             {count === 0
               ? isClickMode || permissionState === "unsupported"
-                ? "点击中间的圆形按钮，连点 5 次（或按空格键）"
-                : "用力摇晃手机，目标 5 次（或按空格键）"
+                ? "点击中间的圆形按钮，连点 5 次"
+                : "用力摇晃手机，目标 5 次"
               : count >= TARGET_SHAKES
                 ? "摇晃完成！正在生成报告..."
                 : isClickMode || permissionState === "unsupported"
@@ -687,7 +747,7 @@ function AnalyzingPhase() {
   }, []);
 
   return (
-    <div className="relative w-full min-h-screen flex flex-col items-center justify-center px-4">
+    <div className="relative w-full min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center px-4">
       <div
         className="fixed inset-0 pointer-events-none"
         style={{
@@ -744,7 +804,6 @@ function ResultPhase({
   onResultUpdate?: (result: AnalysisResult, mock: boolean) => void;
 }) {
   const [revealed, setRevealed] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
   const [alternativeLoading, setAlternativeLoading] = useState(false);
   const { showToast } = useToast();
@@ -753,26 +812,6 @@ function ResultPhase({
     const t = setTimeout(() => setRevealed(true), 800);
     return () => clearTimeout(t);
   }, []);
-
-  const handleSave = () => {
-    try {
-      saveDecision(
-        {
-          dilemma,
-          optionA,
-          optionB,
-          shakeIntensity: shakeStats.peakIntensity,
-          shakeCount: shakeStats.shakeCount,
-          tangleLevel: shakeStats.tangleLevel,
-        },
-        result
-      );
-      setSaved(true);
-      showToast("决策已记录！一个月后回来看看这个选择让你满意吗", "success", 4000);
-    } catch {
-      showToast("保存失败，请重试", "error");
-    }
-  };
 
   const handleShare = async () => {
     const shareText = `摇一摇决策器AI分析\n\n我在纠结：${dilemma}\n推荐：${result.recommendLabel}\n\n${result.insight}\n\n摇晃力度：${shakeStats.peakIntensity}% | 置信度：${result.confidence}%\n\n你也来试试：${window.location.origin}`;
@@ -822,7 +861,6 @@ function ResultPhase({
       }
       const data = await response.json();
       onResultUpdate?.(data.result as AnalysisResult, !!data.mock);
-      setSaved(false); // new result not saved yet
       setRevealed(false);
       setTimeout(() => setRevealed(true), 800);
       showToast("已换个角度为你分析，记得重新保存", "success");
@@ -838,7 +876,7 @@ function ResultPhase({
   const confColor = getConfidenceColor(result.confidence);
 
   return (
-    <div className="relative w-full min-h-screen flex flex-col items-center justify-center px-4 py-20">
+    <div className="relative w-full min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center px-4 py-20">
 
       <div className="w-full max-w-[560px] mx-auto animate-fade-in-up">
         <div className="bg-[rgba(255,255,255,0.06)] backdrop-blur-sm border border-[rgba(255,255,255,0.08)] rounded-2xl overflow-hidden">
@@ -1140,27 +1178,13 @@ function ResultPhase({
                     </>
                   )}
                 </button>
-                <button
-                  onClick={handleSave}
-                  disabled={saved}
-                  className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 ${
-                    saved
-                      ? "bg-[rgba(52,211,153,0.15)] border border-[rgba(52,211,153,0.3)] text-[#34d399]"
-                      : "bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white hover:shadow-lg"
-                  }`}
+                <Link
+                  href="/history"
+                  className="flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white hover:shadow-lg"
                 >
-                  {saved ? (
-                    <>
-                      <Check className="w-4 h-4 text-[#34d399]" />
-                      <span>已保存</span>
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      <span>保存到决策日记</span>
-                    </>
-                  )}
-                </button>
+                  <BookOpen className="w-4 h-4" />
+                  <span>查看决策日记</span>
+                </Link>
               </div>
             </div>
           </div>
@@ -1230,6 +1254,22 @@ export default function DecidePage() {
       const data = await response.json();
       setAnalysisResult(data.result);
       setIsMock(!!data.mock);
+      // Auto-save after analysis
+      try {
+        saveDecision(
+          {
+            dilemma,
+            optionA,
+            optionB,
+            shakeIntensity: effectiveStats.peakIntensity,
+            shakeCount: effectiveStats.shakeCount,
+            tangleLevel: effectiveStats.tangleLevel,
+          },
+          data.result
+        );
+      } catch {
+        // silent fail for auto-save
+      }
       setPhase("result");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "分析失败";
@@ -1266,7 +1306,7 @@ export default function DecidePage() {
       {phase !== "shaking" && (
         <Link
           href="/"
-          className="fixed top-[4.75rem] left-4 z-30 text-sm text-[rgba(255,255,255,0.5)] hover:text-white transition-colors cursor-pointer inline-flex items-center gap-1"
+          className="fixed top-16 left-4 z-30 text-sm text-[rgba(255,255,255,0.5)] hover:text-white transition-colors cursor-pointer inline-flex items-center gap-1"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>返回</span>
