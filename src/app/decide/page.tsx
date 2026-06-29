@@ -816,6 +816,48 @@ function ResultPhase({
   const handleShare = async () => {
     const shareText = `摇一摇决策器AI分析\n\n我在纠结：${dilemma}\n推荐：${result.recommendLabel}\n\n${result.insight}\n\n摇晃力度：${shakeStats.peakIntensity}% | 置信度：${result.confidence}%\n\n你也来试试：${window.location.origin}`;
 
+    // Generate share image card via Canvas
+    const generateShareImage = () => {
+      return new Promise<Blob | null>((resolve) => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 750;
+        canvas.height = 500;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { resolve(null); return; }
+
+        // Gradient background
+        const grad = ctx.createLinearGradient(0, 0, 750, 500);
+        grad.addColorStop(0, "#0a0a0f");
+        grad.addColorStop(1, "#1a1040");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 750, 500);
+
+        // Title
+        ctx.fillStyle = "rgba(255,255,255,0.5)";
+        ctx.font = "20px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("摇一摇决策器", 375, 60);
+
+        // Recommendation result
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 48px sans-serif";
+        ctx.fillText(result.recommendLabel, 375, 240);
+
+        // Confidence and tangle
+        const tangleLabel = getTangleInfo(shakeStats.peakIntensity).label;
+        ctx.fillStyle = "rgba(255,255,255,0.6)";
+        ctx.font = "22px sans-serif";
+        ctx.fillText(`置信度 ${result.confidence}%  ·  ${tangleLabel}`, 375, 340);
+
+        // Footer signature
+        ctx.fillStyle = "rgba(255,255,255,0.3)";
+        ctx.font = "16px sans-serif";
+        ctx.fillText("AI 决策助手", 375, 460);
+
+        canvas.toBlob((blob) => resolve(blob), "image/png");
+      });
+    };
+
     if (navigator.share) {
       try {
         await navigator.share({
@@ -832,6 +874,20 @@ function ResultPhase({
         setCopied(true);
         showToast("已复制到剪贴板，快去分享吧！", "success");
         setTimeout(() => setCopied(false), 3000);
+
+        // Generate and download image card
+        const blob = await generateShareImage();
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "摇一摇决策_结果.png";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast("分享图片已下载", "success");
+        }
       } catch {
         showToast("复制失败，请手动复制", "error");
       }
@@ -876,7 +932,7 @@ function ResultPhase({
   const confColor = getConfidenceColor(result.confidence);
 
   return (
-    <div className="relative w-full min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center px-4 py-20">
+    <div className="safe-bottom relative w-full min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center px-4 py-20">
 
       <div className="w-full max-w-[560px] mx-auto animate-fade-in-up">
         <div className="bg-[rgba(255,255,255,0.06)] backdrop-blur-sm border border-[rgba(255,255,255,0.08)] rounded-2xl overflow-hidden">
@@ -1138,26 +1194,28 @@ function ResultPhase({
 
             {/* Actions */}
             <div className="pb-8">
+              {/* Primary CTA: 再来一次 */}
+              <button
+                onClick={onReset}
+                className="w-full py-3 px-6 rounded-xl font-medium shadow-lg bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 mb-3"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>再来一次</span>
+              </button>
+              {/* Secondary: 换个角度分析 */}
               <button
                 onClick={handleAlternative}
                 disabled={alternativeLoading}
-                className={`w-full py-3 px-6 rounded-xl font-medium transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 mb-3 ${
+                className={`w-full py-3 px-6 rounded-xl font-medium bg-transparent border border-[rgba(255,255,255,0.12)] transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 mb-3 ${
                   alternativeLoading
-                    ? "bg-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.5)] cursor-not-allowed"
-                    : "bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] text-white hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
+                    ? "text-[rgba(255,255,255,0.5)] cursor-not-allowed"
+                    : "text-[rgba(255,255,255,0.7)] hover:text-white hover:border-[rgba(255,255,255,0.25)] hover:bg-[rgba(255,255,255,0.04)]"
                 }`}
               >
                 <Sparkles className="w-4 h-4" />
                 <span>{alternativeLoading ? "分析中..." : "换个角度分析"}</span>
               </button>
               <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={onReset}
-                  className="flex-1 py-3 px-6 rounded-xl border border-[rgba(255,255,255,0.15)] text-white font-medium hover:bg-[rgba(255,255,255,0.06)] transition-all duration-300 cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  <span>再来一次</span>
-                </button>
                 <button
                   onClick={handleShare}
                   className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 ${
@@ -1180,7 +1238,7 @@ function ResultPhase({
                 </button>
                 <Link
                   href="/history"
-                  className="flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white hover:shadow-lg"
+                  className="flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 border border-[rgba(255,255,255,0.15)] text-white hover:bg-[rgba(255,255,255,0.06)]"
                 >
                   <BookOpen className="w-4 h-4" />
                   <span>查看决策日记</span>
@@ -1366,7 +1424,7 @@ export default function DecidePage() {
                 <p className="text-[rgba(255,255,255,0.6)] mb-6">{error}</p>
                 <button
                   onClick={handleReset}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-medium hover:opacity-90 transition-opacity cursor-pointer"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.08)] text-white font-medium hover:bg-[rgba(255,255,255,0.12)] transition-all duration-300 cursor-pointer"
                 >
                   <RotateCcw className="w-4 h-4" />
                   <span>再来一次</span>

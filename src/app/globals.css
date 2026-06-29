@@ -115,8 +115,8 @@ a:active {
 }
 
 @keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 8px rgba(251, 191, 36, 0.2); }
-  50% { box-shadow: 0 0 16px rgba(251, 191, 36, 0.6); }
+  0%, 100% { box-shadow: 0 0 20px rgba(79, 70, 229, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(79, 70, 229, 0.6), 0 0 60px rgba(124, 58, 237, 0.3); }
 }
 
 @keyframes progress-fill {
@@ -127,11 +127,6 @@ a:active {
 @keyframes fade-in-up {
   0% { opacity: 0; transform: translateY(30px); }
   100% { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes spin-slow {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
 }
 
 /* Animation utilities */
