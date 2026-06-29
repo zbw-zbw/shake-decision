@@ -8,7 +8,7 @@ import {
   TangleLevel,
 } from "@/hooks/useShakeDetection";
 import { AnalysisResult } from "@/types/decision";
-import { saveDecision } from "@/lib/storage";
+import { saveDecision, getDecisions } from "@/lib/storage";
 import { useToast } from "@/components/Toast";
 import {
   Smartphone, ArrowLeft, Sparkles, RotateCcw, Link2,
@@ -257,7 +257,7 @@ function DecisionInputForm({
                   errors.dilemma ? "border-red-400" : "border-[rgba(255,255,255,0.08)]"
                 }`}
               />
-              <span className="absolute bottom-3 right-3 text-xs text-[rgba(255,255,255,0.35)]">
+              <span className={`absolute bottom-3 right-3 text-xs ${dilemma.length >= 200 ? "text-red-400" : dilemma.length > 180 ? "text-amber-400" : "text-[rgba(255,255,255,0.35)]"}`}>
                 {dilemma.length}/200
               </span>
             </div>
@@ -277,15 +277,17 @@ function DecisionInputForm({
                 <input
                   type="text"
                   value={optionA}
+                  maxLength={50}
                   onChange={(e) => {
                     setOptionA(e.target.value);
                     if (errors.optionA) setErrors((p) => ({ ...p, optionA: undefined }));
                   }}
                   placeholder="选项A：火锅"
-                  className={`w-full bg-[rgba(255,255,255,0.04)] border rounded-xl pl-4 pr-3 py-2.5 text-white placeholder-[rgba(255,255,255,0.25)] text-sm outline-none transition-all duration-200 focus:border-[#4f46e5] focus:shadow-[0_0_0_3px_rgba(79,70,229,0.2)] cursor-pointer ${
+                  className={`w-full bg-[rgba(255,255,255,0.04)] border rounded-xl pl-4 pr-12 py-2.5 text-white placeholder-[rgba(255,255,255,0.25)] text-sm outline-none transition-all duration-200 focus:border-[#4f46e5] focus:shadow-[0_0_0_3px_rgba(79,70,229,0.2)] cursor-pointer ${
                     errors.optionA ? "border-red-400" : "border-[rgba(255,255,255,0.08)]"
                   }`}
                 />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[rgba(255,255,255,0.35)]">{optionA.length}/50</span>
               </div>
               {errors.optionA && (
                 <p className="text-red-400 text-xs mt-1.5">{errors.optionA}</p>
@@ -301,15 +303,17 @@ function DecisionInputForm({
                 <input
                   type="text"
                   value={optionB}
+                  maxLength={50}
                   onChange={(e) => {
                     setOptionB(e.target.value);
                     if (errors.optionB) setErrors((p) => ({ ...p, optionB: undefined }));
                   }}
                   placeholder="选项B：日料"
-                  className={`w-full bg-[rgba(255,255,255,0.04)] border rounded-xl pl-4 pr-3 py-2.5 text-white placeholder-[rgba(255,255,255,0.25)] text-sm outline-none transition-all duration-200 focus:border-[#4f46e5] focus:shadow-[0_0_0_3px_rgba(79,70,229,0.2)] cursor-pointer ${
+                  className={`w-full bg-[rgba(255,255,255,0.04)] border rounded-xl pl-4 pr-12 py-2.5 text-white placeholder-[rgba(255,255,255,0.25)] text-sm outline-none transition-all duration-200 focus:border-[#4f46e5] focus:shadow-[0_0_0_3px_rgba(79,70,229,0.2)] cursor-pointer ${
                     errors.optionB ? "border-red-400" : "border-[rgba(255,255,255,0.08)]"
                   }`}
                 />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[rgba(255,255,255,0.35)]">{optionB.length}/50</span>
               </div>
               {errors.optionB && (
                 <p className="text-red-400 text-xs mt-1.5">{errors.optionB}</p>
@@ -732,14 +736,22 @@ function ShakeInterface({
 }
 
 // Analyzing Phase
-function AnalyzingPhase() {
-  const [messageIndex, setMessageIndex] = useState(0);
+function AnalyzingPhase({ onCancel }: { onCancel: () => void }) {
+  const [messageIndex, setMessageIndex] = useState(() => Math.floor(Math.random() * loadingMessages.length));
+  const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setMessageIndex((i) => (i + 1) % loadingMessages.length);
     }, 2000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setElapsed((t) => t + 1);
+    }, 1000);
+    return () => clearInterval(timer);
   }, []);
 
   return (
@@ -774,7 +786,21 @@ function AnalyzingPhase() {
             {loadingMessages[messageIndex]}
           </p>
         </div>
+        {elapsed >= 10 && (
+          <p className="text-[#fbbf24] text-xs mt-3 animate-fade-in-up">
+            AI 正在深度思考中...
+          </p>
+        )}
       </div>
+      <button
+        onClick={onCancel}
+        className="relative z-10 mt-10 px-5 py-2 rounded-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.12)] text-sm text-[rgba(255,255,255,0.6)] hover:bg-[rgba(255,255,255,0.12)] hover:text-white transition-all duration-300 cursor-pointer"
+      >
+        <span className="inline-flex items-center gap-1.5">
+          <X className="w-3.5 h-3.5" />
+          取消分析
+        </span>
+      </button>
     </div>
   );
 }
@@ -802,11 +828,21 @@ function ResultPhase({
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
   const [alternativeLoading, setAlternativeLoading] = useState(false);
+  const [decisionCount, setDecisionCount] = useState<number | null>(null);
   const { showToast } = useToast();
 
   useEffect(() => {
     const t = setTimeout(() => setRevealed(true), 800);
     return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const count = getDecisions().length;
+      setDecisionCount(count);
+    } catch {
+      // ignore
+    }
   }, []);
 
   const handleShare = async () => {
@@ -894,6 +930,9 @@ function ResultPhase({
     if (alternativeLoading) return;
     setAlternativeLoading(true);
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000);
+
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -906,7 +945,11 @@ function ResultPhase({
           tangleLevel: shakeStats.tangleLevel,
           perspective: "alternative",
         }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error || `请求失败: ${response.status}`);
@@ -915,9 +958,11 @@ function ResultPhase({
       onResultUpdate?.(data.result as AnalysisResult, !!data.mock);
       setRevealed(false);
       setTimeout(() => setRevealed(true), 800);
-      showToast("已换个角度为你分析，记得重新保存", "success");
+      showToast("已换个角度为你分析", "success");
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "分析失败";
+      const message = err instanceof Error
+        ? (err.name === "AbortError" ? "换个角度分析超时，请稍后重试" : err.message)
+        : "分析失败";
       showToast(message, "error");
     } finally {
       setAlternativeLoading(false);
@@ -963,6 +1008,16 @@ function ResultPhase({
               </div>
             </div>
           </div>
+
+          {decisionCount !== null && (
+            <div className="px-6 sm:px-8 pb-2">
+              <p className="text-xs text-[rgba(255,255,255,0.4)] text-right">
+                {decisionCount === 0
+                  ? "这是你的第一次决策！"
+                  : `这是你的第 ${decisionCount} 次决策`}
+              </p>
+            </div>
+          )}
 
           <div className="px-6 sm:px-8">
             {/* Recommendation */}
@@ -1262,6 +1317,7 @@ export default function DecidePage() {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isMock, setIsMock] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleSubmit = useCallback(
     (data: { dilemma: string; optionA: string; optionB: string }) => {
@@ -1287,6 +1343,10 @@ export default function DecidePage() {
     setError(null);
 
     try {
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s client timeout
+
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1298,7 +1358,10 @@ export default function DecidePage() {
           shakeCount: effectiveStats.shakeCount,
           tangleLevel: effectiveStats.tangleLevel,
         }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
@@ -1326,9 +1389,34 @@ export default function DecidePage() {
       }
       setPhase("result");
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "分析失败";
-      setError(message);
-      setPhase("result");
+      const message = err instanceof Error
+        ? (err.name === "AbortError" ? "AI 分析超时，已使用本地分析" : err.message)
+        : "分析失败";
+      // Fallback to mock result on failure
+      if (err instanceof Error && err.name === "AbortError") {
+        const { generateMockResult } = await import("@/app/api/analyze/route");
+        const mockResult = generateMockResult({
+          dilemma,
+          optionA,
+          optionB,
+          shakeIntensity: effectiveStats.peakIntensity,
+          shakeCount: effectiveStats.shakeCount,
+          tangleLevel: effectiveStats.tangleLevel,
+        });
+        setAnalysisResult(mockResult);
+        setIsMock(true);
+        try {
+          saveDecision(
+            { dilemma, optionA, optionB, shakeIntensity: effectiveStats.peakIntensity, shakeCount: effectiveStats.shakeCount, tangleLevel: effectiveStats.tangleLevel },
+            mockResult
+          );
+        } catch { /* silent */ }
+        setError(message);
+        setPhase("result");
+      } else {
+        setError(message);
+        setPhase("result");
+      }
     }
   }, [dilemma, optionA, optionB, shakeStats]);
 
@@ -1348,6 +1436,15 @@ export default function DecidePage() {
     setAnalysisResult(null);
     setIsMock(false);
     setError(null);
+    setPhase("input");
+    window.scrollTo(0, 0);
+  }, []);
+
+  const handleCancelAnalysis = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
     setPhase("input");
     window.scrollTo(0, 0);
   }, []);
@@ -1396,7 +1493,7 @@ export default function DecidePage() {
 
       {phase === "analyzing" && (
         <div className="transition-all duration-500 ease-out">
-          <AnalyzingPhase />
+          <AnalyzingPhase onCancel={handleCancelAnalysis} />
         </div>
       )}
 

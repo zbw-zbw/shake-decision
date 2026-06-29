@@ -1,8 +1,33 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { Smartphone, RotateCw, Target, Flame, Fish } from "lucide-react";
 
+const STEP_COLORS = [
+  "linear-gradient(135deg, #4f46e5, #7c3aed)",
+  "linear-gradient(135deg, #7c3aed, #f472b6)",
+  "linear-gradient(135deg, #f472b6, #fbbf24)",
+];
+
 export function StepsSection() {
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
   return (
     <section className="relative w-full py-12 sm:py-20 px-4 sm:px-6">
       <div className="max-w-[1100px] mx-auto">
@@ -15,10 +40,18 @@ export function StepsSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6" ref={sectionRef}>
           {/* Step 1 */}
-          <div className="fade-in bg-[rgba(255,255,255,0.06)] backdrop-blur-sm border border-[rgba(255,255,255,0.08)] rounded-2xl p-6 hover:bg-[rgba(255,255,255,0.10)] transition-all duration-300">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4f46e5] to-[#7c3aed] flex items-center justify-center text-white font-bold text-sm mb-5 mx-auto">
+          <div
+            className={`bg-[rgba(255,255,255,0.06)] backdrop-blur-sm border border-[rgba(255,255,255,0.08)] rounded-2xl p-6 hover:bg-[rgba(255,255,255,0.10)] transition-all duration-300 ${
+              visible ? "animate-stagger-in opacity-0" : "opacity-0"
+            }`}
+            style={{ animationDelay: visible ? "0ms" : undefined, animationFillMode: "forwards" }}
+          >
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm mb-5 mx-auto"
+              style={{ background: STEP_COLORS[0] }}
+            >
               1
             </div>
             <h3 className="text-lg font-semibold text-white text-center mb-5">
@@ -45,8 +78,16 @@ export function StepsSection() {
           </div>
 
           {/* Step 2 */}
-          <div className="fade-in animate-shake-card bg-[rgba(255,255,255,0.06)] backdrop-blur-sm border border-[rgba(255,255,255,0.08)] rounded-2xl p-6 hover:bg-[rgba(255,255,255,0.10)] transition-all duration-300">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4f46e5] to-[#7c3aed] flex items-center justify-center text-white font-bold text-sm mb-5 mx-auto">
+          <div
+            className={`animate-shake-card bg-[rgba(255,255,255,0.06)] backdrop-blur-sm border border-[rgba(255,255,255,0.08)] rounded-2xl p-6 hover:bg-[rgba(255,255,255,0.10)] transition-all duration-300 ${
+              visible ? "animate-stagger-in opacity-0" : "opacity-0"
+            }`}
+            style={{ animationDelay: visible ? "200ms" : undefined, animationFillMode: "forwards" }}
+          >
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm mb-5 mx-auto"
+              style={{ background: STEP_COLORS[1] }}
+            >
               2
             </div>
             <h3 className="text-lg font-semibold text-white text-center mb-5">
@@ -85,8 +126,16 @@ export function StepsSection() {
           </div>
 
           {/* Step 3 */}
-          <div className="fade-in bg-[rgba(255,255,255,0.06)] backdrop-blur-sm border border-[rgba(79,70,229,0.4)] rounded-2xl p-6 hover:bg-[rgba(255,255,255,0.10)] transition-all duration-300 shadow-[0_0_20px_rgba(79,70,229,0.15)]">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4f46e5] to-[#7c3aed] flex items-center justify-center text-white font-bold text-sm mb-5 mx-auto">
+          <div
+            className={`bg-[rgba(255,255,255,0.06)] backdrop-blur-sm border border-[rgba(79,70,229,0.4)] rounded-2xl p-6 hover:bg-[rgba(255,255,255,0.10)] transition-all duration-300 shadow-[0_0_20px_rgba(79,70,229,0.15)] ${
+              visible ? "animate-stagger-in opacity-0" : "opacity-0"
+            }`}
+            style={{ animationDelay: visible ? "400ms" : undefined, animationFillMode: "forwards" }}
+          >
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm mb-5 mx-auto"
+              style={{ background: STEP_COLORS[2] }}
+            >
               3
             </div>
             <h3 className="text-lg font-semibold text-white text-center mb-5">

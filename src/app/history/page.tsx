@@ -14,7 +14,7 @@ import {
 } from "@/lib/storage";
 import { DecisionRecord, DecisionStats } from "@/types/decision";
 import { useToast } from "@/components/Toast";
-import { Inbox, BarChart3, Activity, Target, Smile, Lightbulb, Smartphone, ArrowRight, ChevronDown, Check, Clock, Zap, Flame, Heart, Star, TrendingUp, Search, X, Download, Upload, type LucideIcon, Utensils, ShoppingBag, Home, Briefcase, Book, Car, Dumbbell, Plane, Moon } from "lucide-react";
+import { Inbox, BarChart3, Activity, Target, Smile, Lightbulb, Smartphone, ArrowRight, ChevronDown, Check, Clock, Zap, Flame, Heart, Star, TrendingUp, Search, X, Download, Upload, Share2, type LucideIcon, Utensils, ShoppingBag, Home, Briefcase, Book, Car, Dumbbell, Plane, Moon } from "lucide-react";
 
 // Helpers
 const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
@@ -436,6 +436,33 @@ function DecisionCard({ record, onDelete }: { record: DecisionRecord; onDelete: 
                 <Smartphone className="w-4 h-4 text-[rgba(255,255,255,0.5)] shrink-0 mt-0.5" />
                 <span>{result.tangleAnalysis}</span>
               </p>
+            </div>
+
+            {/* Share button */}
+            <div className="mt-4 pt-3 border-t border-[rgba(255,255,255,0.06)]">
+              <button
+                onClick={async () => {
+                  const shareText = `我纠结「${input.dilemma}」，最终AI建议选「${result.recommendLabel}」（置信度${result.confidence}%）`;
+                  if (navigator.share) {
+                    try {
+                      await navigator.share({ title: "摇一摇决策结果", text: shareText });
+                    } catch {
+                      // user cancelled
+                    }
+                  } else {
+                    try {
+                      await navigator.clipboard.writeText(shareText);
+                      showToast("已复制到剪贴板", "success", 2000);
+                    } catch {
+                      showToast("复制失败，请手动复制", "error", 2000);
+                    }
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.08)] text-xs text-[rgba(255,255,255,0.6)] hover:bg-[rgba(255,255,255,0.12)] hover:text-white transition-all cursor-pointer"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span>分享结果</span>
+              </button>
             </div>
           </div>
         </div>

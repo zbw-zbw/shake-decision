@@ -129,6 +129,11 @@ a:active {
   100% { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes stagger-in {
+  0% { opacity: 0; transform: translateY(24px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
 /* Animation utilities */
 .animate-shake-title {
   animation: shake-title 3s ease-in-out infinite;
@@ -173,6 +178,11 @@ a:active {
 
 .animate-fade-in-up {
   animation: fade-in-up 0.7s ease forwards;
+  will-change: transform, opacity;
+}
+
+.animate-stagger-in {
+  animation: stagger-in 0.6s ease forwards;
   will-change: transform, opacity;
 }
 

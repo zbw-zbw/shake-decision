@@ -32,7 +32,7 @@ function getClientIP(req: NextRequest): string {
   return "unknown";
 }
 
-function generateMockResult(input: DecisionInput): AnalysisResult {
+export function generateMockResult(input: DecisionInput): AnalysisResult {
   const { dilemma, optionA, optionB, shakeIntensity, tangleLevel } = input;
 
   // Mock recommendation: alternate between A and B deterministically based on input length
