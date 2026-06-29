@@ -458,6 +458,7 @@ export default function HistoryPage() {
   const [stats, setStats] = useState<DecisionStats | null>(null);
   const [clearConfirm, setClearConfirm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [composing, setComposing] = useState(false);
   const [filter, setFilter] = useState("all");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { showToast } = useToast();
@@ -479,7 +480,7 @@ export default function HistoryPage() {
   // Group by date
   const grouped = useMemo(() => {
     const map = new Map<string, DecisionRecord[]>();
-    const q = searchQuery.trim().toLowerCase();
+    const q = !composing && searchQuery.trim() ? searchQuery.trim().toLowerCase() : "";
     let filtered = q
       ? records.filter(
           (r) =>
@@ -536,11 +537,13 @@ export default function HistoryPage() {
       {records.length > 0 && (
         <div className="max-w-[640px] mx-auto mb-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[rgba(255,255,255,0.4)] pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[rgba(255,255,255,0.5)] pointer-events-none" />
             <input
-              type="search"
+              type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onCompositionStart={() => setComposing(true)}
+              onCompositionEnd={(e) => { setComposing(false); setSearchQuery((e.target as HTMLInputElement).value); }}
               placeholder="搜索决策..."
               className="w-full bg-[rgba(255,255,255,0.06)] backdrop-blur-sm border border-[rgba(255,255,255,0.08)] rounded-xl pl-10 pr-10 py-2.5 text-sm text-white placeholder:text-[rgba(255,255,255,0.4)] focus:outline-none focus:border-[rgba(255,255,255,0.2)] transition-colors cursor-text"
             />

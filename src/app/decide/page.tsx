@@ -214,13 +214,15 @@ function DecisionInputForm({
     }
   };
 
+  const [activeTemplate, setActiveTemplate] = useState<string | null>(null);
+
   const applyTemplate = (t: (typeof templates)[0]) => {
     setDilemma(t.dilemma);
     setOptionA(t.optionA);
     setOptionB(t.optionB);
     setErrors({});
-    setFlashField("template");
-    setTimeout(() => setFlashField(null), 400);
+    setActiveTemplate(t.label);
+    setTimeout(() => setActiveTemplate(null), 400);
   };
 
   const isDisabled = !dilemma.trim() || !optionA.trim() || !optionB.trim() || dilemma.trim().length < 5;
@@ -325,7 +327,7 @@ function DecisionInputForm({
                   key={t.label}
                   onClick={() => applyTemplate(t)}
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-300 cursor-pointer ${
-                    flashField === "template"
+                    activeTemplate === t.label
                       ? "bg-[rgba(79,70,229,0.25)] border-[rgba(79,70,229,0.5)] text-white scale-105"
                       : "bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.7)] hover:bg-[rgba(255,255,255,0.10)] hover:border-[rgba(255,255,255,0.15)]"
                   }`}
@@ -513,29 +515,23 @@ function ShakeInterface({
   };
 
   const handleCircleClick = async () => {
-    // iOS 13+ 必须在用户手势中调用 requestPermission
+    // iOS 13+ must call requestPermission in user gesture
     if (permissionState === "prompt" && !isClickMode) {
       const granted = await requestPermission();
       if (granted) {
         startListening();
       }
     }
-    // Click mode fallback
-    if (isClickMode || permissionState === "unsupported" || permissionState === "denied") {
-      clickShake.triggerClick();
-    }
+    // Always trigger a click shake — works on both PC (no gyroscope) and mobile (click mode)
+    clickShake.triggerClick();
   };
 
   const handleMouseDown = () => {
-    if (isClickMode || permissionState === "unsupported" || permissionState === "denied") {
-      clickShake.startClickHold();
-    }
+    clickShake.startClickHold();
   };
 
   const handleMouseUp = () => {
-    if (isClickMode || permissionState === "unsupported" || permissionState === "denied") {
-      clickShake.stopClickHold();
-    }
+    clickShake.stopClickHold();
   };
 
   const circleScale = 1 + (intensity / 100) * 0.1;
@@ -1357,14 +1353,14 @@ export default function DecidePage() {
   }, []);
 
   return (
-    <div className="relative min-h-screen pt-14 pb-10 overflow-hidden">
+    <div className="relative pt-14 overflow-hidden" style={{ height: "100vh" }}>
       <HttpsBanner />
 
       {/* Fixed back button in top-left (hidden during shaking phase) */}
       {phase !== "shaking" && (
         <Link
           href="/"
-          className="fixed top-16 left-4 z-30 text-sm text-[rgba(255,255,255,0.5)] hover:text-white transition-colors cursor-pointer inline-flex items-center gap-1"
+          className="fixed top-[4.5rem] left-4 z-30 text-sm text-[rgba(255,255,255,0.5)] hover:text-white transition-colors cursor-pointer inline-flex items-center gap-1"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>返回</span>
