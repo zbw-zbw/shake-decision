@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, type ComponentType } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, type ComponentType } from "react";
 import Link from "next/link";
 import {
   getDecisions,
@@ -9,10 +9,12 @@ import {
   deleteDecision,
   clearAllDecisions,
   getUnratedCount,
+  exportDecisions,
+  importDecisions,
 } from "@/lib/storage";
 import { DecisionRecord, DecisionStats } from "@/types/decision";
 import { useToast } from "@/components/Toast";
-import { Inbox, BarChart3, Activity, Target, Smile, Lightbulb, Smartphone, ArrowRight, ChevronDown, Check, Clock, Zap, Flame, Heart, Star, TrendingUp, Search, X, type LucideIcon } from "lucide-react";
+import { Inbox, BarChart3, Activity, Target, Smile, Lightbulb, Smartphone, ArrowRight, ChevronDown, Check, Clock, Zap, Flame, Heart, Star, TrendingUp, Search, X, Download, Upload, type LucideIcon } from "lucide-react";
 
 // Helpers
 const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
@@ -188,9 +190,11 @@ function EmptyState() {
 function DeleteConfirmPanel({
   onConfirm,
   onCancel,
+  message,
 }: {
   onConfirm: () => void;
   onCancel: () => void;
+  message?: string;
 }) {
   return (
     <>
@@ -200,7 +204,7 @@ function DeleteConfirmPanel({
       />
       <div className="fixed bottom-0 left-0 right-0 z-50 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-w-sm sm:rounded-2xl animate-slide-up">
         <div className="bg-[#1a1530] sm:border border-[rgba(255,255,255,0.1)] rounded-t-2xl sm:rounded-2xl p-6">
-          <h3 className="text-white font-semibold text-base mb-2">确定删除这条决策记录吗？</h3>
+          <h3 className="text-white font-semibold text-base mb-2">{message || "确定删除这条决策记录吗？"}</h3>
           <p className="text-[rgba(255,255,255,0.5)] text-sm mb-6">删除后无法恢复</p>
           <div className="flex gap-3">
             <button
@@ -425,6 +429,9 @@ export default function HistoryPage() {
   const [stats, setStats] = useState<DecisionStats | null>(null);
   const [clearConfirm, setClearConfirm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filter, setFilter] = useState("all");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const { showToast } = useToast();
 
   const refresh = useCallback(() => {
     const data = getDecisions();
@@ -444,7 +451,7 @@ export default function HistoryPage() {
   const grouped = useMemo(() => {
     const map = new Map<string, DecisionRecord[]>();
     const q = searchQuery.trim().toLowerCase();
-    const filtered = q
+    let filtered = q
       ? records.filter(
           (r) =>
             r.input.dilemma.toLowerCase().includes(q) ||
@@ -452,6 +459,22 @@ export default function HistoryPage() {
             r.input.optionB.toLowerCase().includes(q)
         )
       : records;
+    if (filter !== "all") {
+      filtered = filtered.filter((r) => {
+        switch (filter) {
+          case "high-tangle":
+            return r.input.tangleLevel === "heavy" || r.input.tangleLevel === "extreme";
+          case "low-tangle":
+            return r.input.tangleLevel === "light" || r.input.tangleLevel === "medium";
+          case "rated":
+            return r.satisfaction != null && r.satisfaction > 0;
+          case "unrated":
+            return r.satisfaction == null || r.satisfaction === 0;
+          default:
+            return true;
+        }
+      });
+    }
     filtered.forEach((r) => {
       const key = getDateKey(r.timestamp);
       if (!map.has(key)) map.set(key, []);
@@ -459,7 +482,7 @@ export default function HistoryPage() {
     });
     // Sort keys descending
     return Array.from(map.entries()).sort(([a], [b]) => b.localeCompare(a));
-  }, [records, searchQuery]);
+  }, [records, searchQuery, filter]);
 
   const handleClearAll = () => {
     clearAllDecisions();
@@ -480,9 +503,9 @@ export default function HistoryPage() {
       {/* Stats */}
       {stats && <StatsPanel stats={stats} />}
 
-      {/* Search box */}
+      {/* Search box + Filter + Export/Import */}
       {records.length > 0 && (
-        <div className="max-w-[640px] mx-auto mb-6">
+        <div className="max-w-[640px] mx-auto mb-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[rgba(255,255,255,0.4)] pointer-events-none" />
             <input
@@ -506,15 +529,92 @@ export default function HistoryPage() {
         </div>
       )}
 
-      {/* Clear all button */}
+      {/* Filter + Export/Import + Clear all */}
       {records.length > 0 && (
-        <div className="max-w-[640px] mx-auto mb-6 flex justify-end">
-          <button
-            onClick={() => setClearConfirm(true)}
-            className="text-xs text-[rgba(255,255,255,0.35)] hover:text-[#f472b6] transition-colors cursor-pointer"
+        <div className="max-w-[640px] mx-auto mb-6 flex items-center justify-between gap-2 flex-wrap">
+          {/* Filter dropdown */}
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="bg-[rgba(255,255,255,0.06)] backdrop-blur-sm border border-[rgba(255,255,255,0.08)] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[rgba(255,255,255,0.2)] transition-colors cursor-pointer appearance-none"
+            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='rgba(255,255,255,0.4)' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center", paddingRight: "28px" }}
           >
-            清空所有记录
-          </button>
+            <option value="all" style={{ backgroundColor: "#1a1530" }}>全部</option>
+            <option value="high-tangle" style={{ backgroundColor: "#1a1530" }}>高纠结</option>
+            <option value="low-tangle" style={{ backgroundColor: "#1a1530" }}>低纠结</option>
+            <option value="rated" style={{ backgroundColor: "#1a1530" }}>已评价</option>
+            <option value="unrated" style={{ backgroundColor: "#1a1530" }}>未评价</option>
+          </select>
+
+          <div className="flex items-center gap-2">
+            {/* Export button */}
+            <button
+              onClick={() => {
+                try {
+                  const json = exportDecisions();
+                  const blob = new Blob([json], { type: "application/json" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+                  a.href = url;
+                  a.download = `摇一摇决策器_备份_${date}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                } catch {
+                  showToast("导出失败", "error", 2000);
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.08)] text-xs text-[rgba(255,255,255,0.7)] hover:bg-[rgba(255,255,255,0.12)] hover:text-white transition-all cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>导出数据</span>
+            </button>
+
+            {/* Import button */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.08)] text-xs text-[rgba(255,255,255,0.7)] hover:bg-[rgba(255,255,255,0.12)] hover:text-white transition-all cursor-pointer"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>导入数据</span>
+            </button>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                  try {
+                    const text = reader.result as string;
+                    const result = importDecisions(text, "merge");
+                    showToast(`导入了 ${result.imported} 条记录`, "success", 3000);
+                    refresh();
+                  } catch (err) {
+                    showToast(err instanceof Error ? err.message : "导入失败", "error", 3000);
+                  }
+                };
+                reader.onerror = () => {
+                  showToast("文件读取失败", "error", 2000);
+                };
+                reader.readAsText(file);
+                // Reset so the same file can be re-selected
+                e.target.value = "";
+              }}
+            />
+
+            {/* Clear all button */}
+            <button
+              onClick={() => setClearConfirm(true)}
+              className="text-xs text-[rgba(255,255,255,0.35)] hover:text-[#f472b6] transition-colors cursor-pointer"
+            >
+              清空所有
+            </button>
+          </div>
         </div>
       )}
 
@@ -550,6 +650,7 @@ export default function HistoryPage() {
         <DeleteConfirmPanel
           onConfirm={handleClearAll}
           onCancel={() => setClearConfirm(false)}
+          message="确定清空所有决策记录吗？此操作不可撤销。"
         />
       )}
 

@@ -901,6 +901,113 @@ function ResultPhase({
               </p>
             </div>
 
+            {/* A vs B Comparison Card */}
+            <div className="grid grid-cols-2 gap-3 mb-6 animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
+              {/* Option A */}
+              <div
+                className="bg-[rgba(255,255,255,0.05)] rounded-xl p-4 border transition-all duration-300"
+                style={{
+                  borderColor: result.recommendation === "A" ? "#4f46e5" : "rgba(255,255,255,0.1)",
+                  boxShadow: result.recommendation === "A" ? "0 0 20px rgba(79,70,229,0.15)" : "none",
+                }}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-2 h-2 rounded-full bg-[#38bdf8]" />
+                  <span className="text-xs font-semibold text-white">选项 A</span>
+                  {result.recommendation === "A" && (
+                    <span className="ml-auto inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[rgba(79,70,229,0.2)] text-[10px] text-[#818cf8] font-medium">
+                      推荐
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm font-bold text-white mb-2">{optionA}</p>
+                <p className="text-xs text-[rgba(255,255,255,0.45)] leading-relaxed">
+                  {result.recommendation === "A"
+                    ? result.rootCauses[0] || "综合评估更优"
+                    : result.rootCauses[1] || "另一种选择"}
+                </p>
+                {result.recommendation === "A" && (
+                  <div className="mt-3 flex items-center gap-1.5">
+                    <div className="relative w-8 h-8">
+                      <svg className="w-8 h-8 -rotate-90" viewBox="0 0 36 36">
+                        <path
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="rgba(255,255,255,0.08)"
+                          strokeWidth="3"
+                        />
+                        <path
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke={confColor}
+                          strokeWidth="3"
+                          strokeDasharray={`${result.confidence}, 100`}
+                          style={{ strokeDasharray: revealed ? `${result.confidence}, 100` : `0, 100` }}
+                          className="transition-all duration-1000 ease-out"
+                        />
+                      </svg>
+                      <span className="absolute inset-0 flex items-center justify-center text-[7px] font-bold text-white">
+                        {result.confidence}%
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-[rgba(255,255,255,0.4)]">置信度</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Option B */}
+              <div
+                className="bg-[rgba(255,255,255,0.05)] rounded-xl p-4 border transition-all duration-300"
+                style={{
+                  borderColor: result.recommendation === "B" ? "#4f46e5" : "rgba(255,255,255,0.1)",
+                  boxShadow: result.recommendation === "B" ? "0 0 20px rgba(79,70,229,0.15)" : "none",
+                }}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-2 h-2 rounded-full bg-[#f472b6]" />
+                  <span className="text-xs font-semibold text-white">选项 B</span>
+                  {result.recommendation === "B" && (
+                    <span className="ml-auto inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[rgba(79,70,229,0.2)] text-[10px] text-[#818cf8] font-medium">
+                      推荐
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm font-bold text-white mb-2">{optionB}</p>
+                <p className="text-xs text-[rgba(255,255,255,0.45)] leading-relaxed">
+                  {result.recommendation === "B"
+                    ? result.rootCauses[0] || "综合评估更优"
+                    : result.rootCauses[1] || "另一种选择"}
+                </p>
+                {result.recommendation === "B" && (
+                  <div className="mt-3 flex items-center gap-1.5">
+                    <div className="relative w-8 h-8">
+                      <svg className="w-8 h-8 -rotate-90" viewBox="0 0 36 36">
+                        <path
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="rgba(255,255,255,0.08)"
+                          strokeWidth="3"
+                        />
+                        <path
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke={confColor}
+                          strokeWidth="3"
+                          strokeDasharray={`${result.confidence}, 100`}
+                          style={{ strokeDasharray: revealed ? `${result.confidence}, 100` : `0, 100` }}
+                          className="transition-all duration-1000 ease-out"
+                        />
+                      </svg>
+                      <span className="absolute inset-0 flex items-center justify-center text-[7px] font-bold text-white">
+                        {result.confidence}%
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-[rgba(255,255,255,0.4)]">置信度</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Root Causes */}
             <div className="mb-6 animate-fade-in-up" style={{ animationDelay: "0.15s" }}>
               <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">

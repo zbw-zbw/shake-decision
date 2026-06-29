@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://shake-decision.vercel.app/sitemap.xml
