@@ -29,6 +29,17 @@ function getTangleLevel(intensity: number): { level: TangleLevel; label: string 
   return { level: "extreme", label: "极度纠结" };
 }
 
+// Sound enabled state (module-level, shared across all hook instances)
+let soundEnabled = true;
+
+export function setSoundEnabled(enabled: boolean): void {
+  soundEnabled = enabled;
+}
+
+export function isSoundEnabled(): boolean {
+  return soundEnabled;
+}
+
 // Lazy-loaded AudioContext for shake sound effects (created on first use)
 let shakeAudioContext: AudioContext | null = null;
 
@@ -66,6 +77,7 @@ async function resumeAudioContext(): Promise<boolean> {
  * require a user gesture or don't support Web Audio.
  */
 async function playShakeSound(intensity: number) {
+  if (!soundEnabled) return;
   try {
     const running = await resumeAudioContext();
     if (!running) return;

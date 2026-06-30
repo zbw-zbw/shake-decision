@@ -175,6 +175,229 @@ function StatsPanel({ stats }: { stats: DecisionStats }) {
   );
 }
 
+// Decision Trend Bar Chart (pure SVG, last 14 days)
+function DecisionTrendChart({ records }: { records: DecisionRecord[] }) {
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+
+  const data = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const days: { date: Date; label: string; count: number; isToday: boolean }[] = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      const count = records.filter((r) => r.timestamp >= d.getTime() && r.timestamp < d.getTime() + 86400000).length;
+      days.push({
+        date: d,
+        label: `${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getDate().toString().padStart(2, "0")}`,
+        count,
+        isToday: i === 0,
+      });
+    }
+    return days;
+  }, [records]);
+
+  const maxCount = Math.max(...data.map((d) => d.count), 1);
+  const svgW = 100;
+  const svgH = 120;
+  const padTop = 8;
+  const padBottom = 20;
+  const padLeft = 4;
+  const padRight = 4;
+  const chartH = svgH - padTop - padBottom;
+  const chartW = svgW - padLeft - padRight;
+  const barGap = chartW / 14;
+  const barWidth = barGap * 0.6;
+
+  return (
+    <div className="flex-1 min-w-0">
+      <h3 className="text-xs font-semibold text-[rgba(255,255,255,0.5)] uppercase tracking-wider mb-3">
+        决策趋势
+      </h3>
+      <div className="relative w-full">
+        <svg
+          viewBox={`0 0 ${svgW} ${svgH}`}
+          className="w-full h-auto"
+          style={{ height: "120px" }}
+          preserveAspectRatio="none"
+        >
+          <defs>
+            <linearGradient id="barGrad" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0%" stopColor="#4f46e5" />
+              <stop offset="100%" stopColor="#7c3aed" />
+            </linearGradient>
+          </defs>
+          {data.map((d, i) => {
+            const x = padLeft + barGap * i + (barGap - barWidth) / 2;
+            const barH = d.count > 0 ? (d.count / maxCount) * chartH : 0;
+            const y = padTop + chartH - barH;
+            const isHovered = hoveredIdx === i;
+            return (
+              <g key={d.label}>
+                {d.count === 0 ? (
+                  <circle
+                    cx={padLeft + barGap * i + barGap / 2}
+                    cy={padTop + chartH - 1}
+                    r={0.8}
+                    fill="rgba(255,255,255,0.2)"
+                  />
+                ) : (
+                  <rect
+                    x={x}
+                    y={y}
+                    width={barWidth}
+                    height={barH}
+                    rx={1}
+                    fill={d.isToday ? "#a78bfa" : "url(#barGrad)"}
+                    opacity={isHovered ? 1 : 0.85}
+                    onMouseEnter={() => setHoveredIdx(i)}
+                    onMouseLeave={() => setHoveredIdx(null)}
+                    className="cursor-pointer"
+                    style={{ transition: "opacity 0.15s" }}
+                  />
+                )}
+                <text
+                  x={padLeft + barGap * i + barGap / 2}
+                  y={svgH - 4}
+                  textAnchor="middle"
+                  fontSize="3.2"
+                  fill="rgba(255,255,255,0.35)"
+                  fontFamily="system-ui, sans-serif"
+                >
+                  {i % 2 === 0 ? d.label : ""}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+        {/* Tooltip */}
+        {hoveredIdx !== null && data[hoveredIdx] && (
+          <div
+            className="absolute pointer-events-none bg-[rgba(0,0,0,0.85)] text-white text-xs rounded-lg px-2 py-1 whitespace-nowrap z-10"
+            style={{
+              left: `${(padLeft + barGap * hoveredIdx + barGap / 2) / svgW * 100}%`,
+              bottom: "24px",
+              transform: "translateX(-50%)",
+            }}
+          >
+            {data[hoveredIdx].label}：{data[hoveredIdx].count} 次决策
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Satisfaction Distribution Pie Chart (pure SVG donut)
+function SatisfactionPieChart({ records }: { records: DecisionRecord[] }) {
+  const dist = useMemo(() => {
+    let satisfied = 0;
+    let neutral = 0;
+    let unsatisfied = 0;
+    records.forEach((r) => {
+      if (!r.satisfaction || r.satisfaction === 0) return;
+      if (r.satisfaction >= 4) satisfied++;
+      else if (r.satisfaction === 3) neutral++;
+      else unsatisfied++;
+    });
+    const total = satisfied + neutral + unsatisfied;
+    return {
+      satisfied,
+      neutral,
+      unsatisfied,
+      total,
+      pctS: total > 0 ? Math.round((satisfied / total) * 100) : 0,
+      pctN: total > 0 ? Math.round((neutral / total) * 100) : 0,
+      pctU: total > 0 ? Math.round((unsatisfied / total) * 100) : 0,
+    };
+  }, [records]);
+
+  const R = 40;
+  const C = 2 * Math.PI * R; // circumference
+  const gapAngle = 4; // small gap between segments
+  const segments = [
+    { label: "满意", pct: dist.pctS, color: "#34d399" },
+    { label: "一般", pct: dist.pctN, color: "#fbbf24" },
+    { label: "不满意", pct: dist.pctU, color: "#f472b6" },
+  ];
+
+  let accumulated = 0;
+
+  return (
+    <div className="flex-shrink-0">
+      <h3 className="text-xs font-semibold text-[rgba(255,255,255,0.5)] uppercase tracking-wider mb-3">
+        满意度分布
+      </h3>
+      <div className="flex items-center gap-4">
+        <svg width="100" height="100" viewBox="0 0 100 100">
+          {/* Background ring */}
+          <circle
+            cx="50"
+            cy="50"
+            r={R}
+            fill="none"
+            stroke="rgba(255,255,255,0.06)"
+            strokeWidth="12"
+          />
+          {segments.map((seg) => {
+            if (seg.pct === 0) return null;
+            const dashLen = (seg.pct / 100) * C;
+            const gapLen = gapAngle;
+            const offset = -C / 4 + (accumulated / 100) * C;
+            accumulated += seg.pct;
+            return (
+              <circle
+                key={seg.label}
+                cx="50"
+                cy="50"
+                r={R}
+                fill="none"
+                stroke={seg.color}
+                strokeWidth="12"
+                strokeDasharray={`${Math.max(dashLen - gapLen, 0)} ${C - dashLen + gapLen}`}
+                strokeDashoffset={offset}
+                strokeLinecap="round"
+                style={{ transition: "stroke-dasharray 0.3s" }}
+              />
+            );
+          })}
+          {/* Center text */}
+          {dist.total > 0 && (
+            <text
+              x="50"
+              y="50"
+              textAnchor="middle"
+              dominantBaseline="central"
+              fontSize="14"
+              fill="rgba(255,255,255,0.7)"
+              fontWeight="bold"
+              fontFamily="system-ui, sans-serif"
+            >
+              {dist.total}
+            </text>
+          )}
+        </svg>
+        {/* Legend */}
+        <div className="flex flex-col gap-1.5">
+          {segments.map((seg) => (
+            <div key={seg.label} className="flex items-center gap-2">
+              <span
+                className="inline-block w-2.5 h-2.5 rounded-full"
+                style={{ backgroundColor: seg.color }}
+              />
+              <span className="text-xs text-[rgba(255,255,255,0.6)]">{seg.label}</span>
+              <span className="text-xs text-[rgba(255,255,255,0.9)] font-medium">
+                {dist.total > 0 ? `${seg.pct}%` : "-"}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Empty State
 function EmptyState() {
   return (
@@ -560,6 +783,19 @@ export default function HistoryPage() {
 
       {/* Stats */}
       {stats && <StatsPanel stats={stats} />}
+
+      {/* Charts: trend + satisfaction pie */}
+      {records.length >= 3 && (
+        <div className="w-full max-w-[640px] mx-auto mb-8 animate-fade-in-up">
+          <div className="bg-[rgba(255,255,255,0.04)] backdrop-blur-sm border border-[rgba(255,255,255,0.06)] rounded-xl p-5 sm:p-6">
+            <div className="flex flex-col sm:flex-row gap-6">
+              <DecisionTrendChart records={records} />
+              <div className="hidden sm:block w-px bg-[rgba(255,255,255,0.06)]" />
+              <SatisfactionPieChart records={records} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search box + Filter + Export/Import */}
       {records.length > 0 && (

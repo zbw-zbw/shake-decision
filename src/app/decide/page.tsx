@@ -8,15 +8,21 @@ import {
   useClickShake,
   TangleLevel,
 } from "@/hooks/useShakeDetection";
+import { useConfetti } from "@/hooks/useConfetti";
 import { AnalysisResult } from "@/types/decision";
-import { saveDecision, getDecisions } from "@/lib/storage";
+import { saveDecision, getDecisions, getCustomTemplates, saveCustomTemplate, deleteCustomTemplate } from "@/lib/storage";
 import { useToast } from "@/components/Toast";
 import {
   Smartphone, ArrowLeft, Sparkles, RotateCcw, Link2,
   Check, Clock, Lightbulb, Search, BarChart3, Zap, CheckCircle2,
   MessageSquare, Flame, ArrowRight, Target, X, Heart, Star, TrendingUp, BookOpen,
-  Utensils, ShoppingBag, Home, Briefcase, Book, Car, Dumbbell, Plane, Moon
+  Utensils, ShoppingBag, Home, Briefcase, Book, Car, Dumbbell, Plane, Moon,
+  Volume2, VolumeX, Maximize, Minimize, Trash2,
 } from "lucide-react";
+import {
+  setSoundEnabled,
+  isSoundEnabled,
+} from "@/hooks/useShakeDetection";
 
 // Types
 type Phase = "input" | "shaking" | "analyzing" | "result";
@@ -218,14 +224,41 @@ function DecisionInputForm({
   };
 
   const [activeTemplate, setActiveTemplate] = useState<string | null>(null);
+  const [customTemplates, setCustomTemplates] = useState<Array<{id: string; dilemma: string; optionA: string; optionB: string; label: string; icon: string}>>([]);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [templateName, setTemplateName] = useState("");
 
-  const applyTemplate = (t: (typeof templates)[0]) => {
+  // Load custom templates on mount
+  useEffect(() => {
+    setCustomTemplates(getCustomTemplates());
+  }, []);
+
+  const applyTemplate = (t: { dilemma: string; optionA: string; optionB: string; label: string }) => {
     setDilemma(t.dilemma);
     setOptionA(t.optionA);
     setOptionB(t.optionB);
     setErrors({});
     setActiveTemplate(t.label);
     setTimeout(() => setActiveTemplate(null), 400);
+  };
+
+  const handleSaveTemplate = () => {
+    const name = templateName.trim() || dilemma.trim().slice(0, 10);
+    saveCustomTemplate({
+      dilemma: dilemma.trim(),
+      optionA: optionA.trim(),
+      optionB: optionB.trim(),
+      label: name,
+      icon: "star",
+    });
+    setCustomTemplates(getCustomTemplates());
+    setShowSaveDialog(false);
+    setTemplateName("");
+  };
+
+  const handleDeleteTemplate = (id: string) => {
+    deleteCustomTemplate(id);
+    setCustomTemplates(getCustomTemplates());
   };
 
   const isDisabled = !dilemma.trim() || !optionA.trim() || !optionB.trim() || dilemma.trim().length < 5;
@@ -325,9 +358,55 @@ function DecisionInputForm({
           </div>
 
           <div className="mb-8">
-            <p className="text-xs text-[rgba(255,255,255,0.4)] mb-3">
-              或者试试快速模板
-            </p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-[rgba(255,255,255,0.4)]">
+                或者试试快速模板
+              </p>
+              {!isDisabled && (
+                <button
+                  onClick={() => setShowSaveDialog(true)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border border-[rgba(251,191,36,0.3)] bg-[rgba(251,191,36,0.08)] text-[#fbbf24] hover:bg-[rgba(251,191,36,0.15)] transition-all duration-200 cursor-pointer"
+                >
+                  <Star className="w-3 h-3" />
+                  <span>收藏为模板</span>
+                </button>
+              )}
+            </div>
+
+            {/* Save template dialog */}
+            {showSaveDialog && (
+              <div className="mb-3 p-3 rounded-xl bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.1)] animate-fade-in-up">
+                <p className="text-xs text-[rgba(255,255,255,0.5)] mb-2">给模板起个名字</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    placeholder={dilemma.trim().slice(0, 10)}
+                    maxLength={20}
+                    className="flex-1 bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.1)] rounded-lg px-3 py-1.5 text-sm text-white placeholder-[rgba(255,255,255,0.25)] outline-none focus:border-[#4f46e5] cursor-pointer"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSaveTemplate();
+                      if (e.key === "Escape") setShowSaveDialog(false);
+                    }}
+                  />
+                  <button
+                    onClick={handleSaveTemplate}
+                    className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white text-xs font-medium hover:shadow-lg transition-all duration-200 cursor-pointer"
+                  >
+                    保存
+                  </button>
+                  <button
+                    onClick={() => { setShowSaveDialog(false); setTemplateName(""); }}
+                    className="px-2 py-1.5 rounded-lg text-[rgba(255,255,255,0.4)] text-xs hover:text-white transition-colors cursor-pointer"
+                  >
+                    取消
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-wrap gap-2">
               {templates.map((t) => (
                 <button
@@ -344,6 +423,40 @@ function DecisionInputForm({
                 </button>
               ))}
             </div>
+
+            {/* Divider between preset and custom templates */}
+            {customTemplates.length > 0 && (
+              <>
+                <div className="flex items-center gap-3 my-4">
+                  <div className="flex-1 h-px bg-[rgba(255,255,255,0.08)]" />
+                  <span className="text-[10px] text-[rgba(255,255,255,0.3)] uppercase tracking-wider">我的收藏</span>
+                  <div className="flex-1 h-px bg-[rgba(255,255,255,0.08)]" />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {customTemplates.map((ct) => (
+                    <div
+                      key={ct.id}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-[rgba(251,191,36,0.2)] bg-[rgba(251,191,36,0.06)] text-[rgba(255,255,255,0.8)] group transition-all duration-200"
+                    >
+                      <button
+                        onClick={() => applyTemplate(ct)}
+                        className="inline-flex items-center gap-1.5 cursor-pointer hover:text-white transition-colors"
+                      >
+                        <Star className="w-3 h-3 text-[#fbbf24]" />
+                        <span>{ct.label}</span>
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(ct.id); }}
+                        className="ml-0.5 text-[rgba(255,255,255,0.2)] hover:text-red-400 transition-colors cursor-pointer"
+                        aria-label="删除模板"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           <button
@@ -399,6 +512,8 @@ function ShakeInterface({
   const [peak, setPeak] = useState(0);
   const [shakingPhase, setShakingPhase] = useState<"shaking" | "finished">("shaking");
   const [pulseKey, setPulseKey] = useState(0);
+  const [muted, setMuted] = useState(() => !isSoundEnabled());
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listeningStartedRef = useRef(false);
 
@@ -512,6 +627,35 @@ function ShakeInterface({
 
   const bgOpacity = Math.min(0.05 + (intensity / 100) * 0.2, 0.25);
 
+  // Sound toggle handler
+  const toggleSound = useCallback(() => {
+    const nextMuted = !muted;
+    setMuted(nextMuted);
+    setSoundEnabled(!nextMuted);
+  }, [muted]);
+
+  // Fullscreen toggle handler
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {
+        // ignore errors
+      });
+    } else {
+      document.exitFullscreen().catch(() => {
+        // ignore errors
+      });
+    }
+  }, []);
+
+  // Track fullscreen state
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
   const handleFinish = () => {
     const stats = {
       shakeCount: count,
@@ -565,6 +709,24 @@ function ShakeInterface({
 
       {shakingPhase === "shaking" ? (
         <>
+          {/* Top-right controls: fullscreen + sound */}
+          <div className="fixed top-[4.5rem] right-4 z-30 flex items-center gap-2">
+            <button
+              onClick={toggleFullscreen}
+              className="bg-[rgba(255,255,255,0.08)] rounded-full p-2 text-[rgba(255,255,255,0.6)] hover:text-white hover:bg-[rgba(255,255,255,0.15)] transition-all duration-200 cursor-pointer"
+              aria-label={isFullscreen ? "退出全屏" : "进入全屏"}
+            >
+              {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={toggleSound}
+              className="bg-[rgba(255,255,255,0.08)] rounded-full p-2 text-[rgba(255,255,255,0.6)] hover:text-white hover:bg-[rgba(255,255,255,0.15)] transition-all duration-200 cursor-pointer"
+              aria-label={muted ? "开启音效" : "关闭音效"}
+            >
+              {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            </button>
+          </div>
+
           {/* Progress ring around circle */}
           <div className="relative z-10 mb-10 w-[200px] h-[200px] mx-auto">
             {/* SVG progress ring */}
@@ -842,11 +1004,19 @@ function ResultPhase({
   const [alternativeLoading, setAlternativeLoading] = useState(false);
   const [decisionCount, setDecisionCount] = useState<number | null>(null);
   const { showToast } = useToast();
+  const { triggerConfetti } = useConfetti();
 
   useEffect(() => {
     const t = setTimeout(() => setRevealed(true), 800);
     return () => clearTimeout(t);
   }, []);
+
+  // Trigger confetti when result is revealed
+  useEffect(() => {
+    if (revealed) {
+      triggerConfetti();
+    }
+  }, [revealed, triggerConfetti]);
 
   useEffect(() => {
     try {

@@ -222,3 +222,57 @@ export function importDecisions(json: string, mode: "replace" | "merge" = "merge
   result.skipped = rawRecords.length - validRecords.length + (validRecords.length - newRecords.length);
   return result;
 }
+
+// ============ Custom Templates ============
+
+export interface CustomTemplate {
+  id: string;
+  dilemma: string;
+  optionA: string;
+  optionB: string;
+  label: string;
+  icon: string;
+}
+
+const CUSTOM_TEMPLATES_KEY = "custom_templates";
+const MAX_CUSTOM_TEMPLATES = 20;
+
+function readCustomTemplates(): CustomTemplate[] {
+  try {
+    const raw = localStorage.getItem(CUSTOM_TEMPLATES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed;
+  } catch {
+    return [];
+  }
+}
+
+function writeCustomTemplates(templates: CustomTemplate[]): void {
+  try {
+    localStorage.setItem(CUSTOM_TEMPLATES_KEY, JSON.stringify(templates));
+  } catch (e) {
+    console.error("Failed to write custom templates:", e);
+  }
+}
+
+export function getCustomTemplates(): CustomTemplate[] {
+  return readCustomTemplates();
+}
+
+export function saveCustomTemplate(template: Omit<CustomTemplate, "id">): CustomTemplate {
+  const templates = readCustomTemplates();
+  const newTemplate: CustomTemplate = {
+    ...template,
+    id: generateId(),
+  };
+  templates.unshift(newTemplate);
+  writeCustomTemplates(templates.slice(0, MAX_CUSTOM_TEMPLATES));
+  return newTemplate;
+}
+
+export function deleteCustomTemplate(id: string): void {
+  const templates = readCustomTemplates().filter((t) => t.id !== id);
+  writeCustomTemplates(templates);
+}
