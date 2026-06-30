@@ -602,6 +602,25 @@ function ShakeInterface({
     };
   }, [count, shakingPhase]);
 
+  // Auto-start AI analysis when shaking finishes (no manual button click needed)
+  useEffect(() => {
+    if (shakingPhase !== "finished") return;
+    // Stop listening to prevent further shake detection
+    stopListening();
+    clickShake.stopClickHold();
+    // Auto-trigger analysis after a brief delay for the finish animation
+    const t = setTimeout(() => {
+      const stats = {
+        shakeCount: count,
+        peakIntensity: peak,
+        tangleLevel: tangleInfo.level,
+      };
+      onReport(stats);
+      onAnalyze(stats);
+    }, 800);
+    return () => clearTimeout(t);
+  }, [shakingPhase]);
+
   // PC space key to trigger a shake (only during shaking phase)
   useEffect(() => {
     if (shakingPhase !== "shaking") return;
@@ -896,11 +915,11 @@ function ShakeInterface({
               </div>
             </div>
             <button
-              onClick={handleFinish}
-              className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-semibold hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer flex items-center justify-center gap-2"
+              disabled
+              className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-semibold transition-all duration-300 cursor-not-allowed flex items-center justify-center gap-2"
             >
-              <span>开始AI分析</span>
-              <ArrowRight className="w-4 h-4" />
+              <span>正在分析...</span>
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             </button>
           </div>
         </div>
@@ -1632,7 +1651,7 @@ export default function DecidePage() {
   }, []);
 
   return (
-    <div className="relative pt-14 overflow-hidden" style={{ height: "100vh" }}>
+    <div className={`relative pt-14 ${phase === "shaking" || phase === "analyzing" ? "overflow-hidden" : "overflow-y-auto"}`} style={phase === "shaking" || phase === "analyzing" ? { height: "100vh" } : { minHeight: "100vh" }}>
       <HttpsBanner />
 
       {/* Fixed back button in top-left (hidden during shaking phase) */}

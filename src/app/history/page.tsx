@@ -558,19 +558,25 @@ function DecisionCard({ record, onDelete, onRateChange }: { record: DecisionReco
                         onClick={() => handleRate(score)}
                         onMouseEnter={() => setHoverRating(score)}
                         onMouseLeave={() => setHoverRating(null)}
-                        className="cursor-pointer transition-transform duration-150 outline-none"
+                        className="cursor-pointer outline-none"
                         style={{
-                          transform: isAnimating ? "scale(1.35)" : isFilled ? "scale(1.1)" : "scale(1)",
+                          transform: isAnimating ? "scale(1.35)" : isFilled ? "scale(1.15)" : "scale(1)",
+                          transition: "transform 150ms ease",
+                          willChange: "transform",
+                          display: "inline-block",
+                          width: "28px",
+                          height: "28px",
                         }}
                         title={`${score}分`}
                       >
                         <Star
-                          className="w-6 h-6 transition-colors duration-150"
+                          className="w-6 h-6"
                           style={{
                             fill: isFilled ? "#fbbf24" : "none",
                             stroke: isFilled ? "#fbbf24" : "rgba(255,255,255,0.35)",
                             strokeWidth: 2,
                             opacity: isHovered && !isSelected ? 0.7 : 1,
+                            transition: "fill 150ms, stroke 150ms, opacity 150ms",
                           }}
                         />
                       </button>
@@ -801,7 +807,7 @@ export default function HistoryPage() {
       {records.length > 0 && (
         <div className="max-w-[640px] mx-auto mb-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[rgba(255,255,255,0.5)] pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[rgba(255,255,255,0.7)] pointer-events-none z-10" />
             <input
               type="text"
               value={searchQuery}
