@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef, type ComponentType } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   useShakeDetection,
   useClickShake,
@@ -189,12 +190,14 @@ function HttpsBanner() {
 // Input Form
 function DecisionInputForm({
   onSubmit,
+  initialValues,
 }: {
   onSubmit: (data: { dilemma: string; optionA: string; optionB: string }) => void;
+  initialValues?: { dilemma: string; optionA: string; optionB: string };
 }) {
-  const [dilemma, setDilemma] = useState("");
-  const [optionA, setOptionA] = useState("");
-  const [optionB, setOptionB] = useState("");
+  const [dilemma, setDilemma] = useState(initialValues?.dilemma ?? "");
+  const [optionA, setOptionA] = useState(initialValues?.optionA ?? "");
+  const [optionB, setOptionB] = useState(initialValues?.optionB ?? "");
   const [errors, setErrors] = useState<{ dilemma?: string; optionA?: string; optionB?: string }>({});
   const [flashField, setFlashField] = useState<string | null>(null);
 
@@ -375,6 +378,7 @@ function ShakeInterface({
   onReport: (stats: { shakeCount: number; peakIntensity: number; tangleLevel: TangleLevel }) => void;
   onAnalyze: (stats: { shakeCount: number; peakIntensity: number; tangleLevel: TangleLevel }) => void;
 }) {
+  const router = useRouter();
   const {
     permissionState,
     isClickMode,
@@ -683,12 +687,20 @@ function ShakeInterface({
 
           {/* Stop button */}
           {count > 0 && count < TARGET_SHAKES && (
-            <button
-              onClick={() => setShakingPhase("finished")}
-              className="relative z-10 px-5 py-2 rounded-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.12)] text-sm text-[rgba(255,255,255,0.7)] hover:bg-[rgba(255,255,255,0.12)] hover:text-white transition-all duration-300 cursor-pointer"
-            >
-              提前结束
-            </button>
+            <div className="relative z-10 flex flex-col items-center gap-3">
+              <button
+                onClick={() => setShakingPhase("finished")}
+                className="px-5 py-2 rounded-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.12)] text-sm text-[rgba(255,255,255,0.7)] hover:bg-[rgba(255,255,255,0.12)] hover:text-white transition-all duration-300 cursor-pointer"
+              >
+                提前结束
+              </button>
+              <button
+                onClick={() => router.push("/")}
+                className="text-xs text-[rgba(255,255,255,0.3)] hover:text-[rgba(255,255,255,0.6)] transition-colors cursor-pointer"
+              >
+                放弃，返回首页
+              </button>
+            </div>
           )}
 
           {/* Debug info - only in development */}
@@ -1472,15 +1484,15 @@ export default function DecidePage() {
       )}
 
       {phase === "input" && (
-        <div className="transition-all duration-500 ease-out">
+        <div key="input" className="phase-enter">
           <div className="flex items-center justify-center min-h-[calc(100vh-6rem)]">
-            <DecisionInputForm onSubmit={handleSubmit} />
+            <DecisionInputForm onSubmit={handleSubmit} initialValues={{ dilemma, optionA, optionB }} />
           </div>
         </div>
       )}
 
       {phase === "shaking" && (
-        <div className="transition-all duration-500 ease-out">
+        <div key="shaking" className="phase-enter">
           <ShakeInterface
             dilemma={dilemma}
             optionA={optionA}
@@ -1492,13 +1504,13 @@ export default function DecidePage() {
       )}
 
       {phase === "analyzing" && (
-        <div className="transition-all duration-500 ease-out">
+        <div key="analyzing" className="phase-enter">
           <AnalyzingPhase onCancel={handleCancelAnalysis} />
         </div>
       )}
 
       {phase === "result" && (
-        <div className="transition-all duration-500 ease-out">
+        <div key="result" className="phase-enter">
           {analysisResult && shakeStats ? (
             <ResultPhase
               result={analysisResult}
@@ -1515,13 +1527,22 @@ export default function DecidePage() {
               <div className="text-center">
                 <h1 className="text-2xl font-bold text-white mb-2">分析出错了</h1>
                 <p className="text-[rgba(255,255,255,0.6)] mb-6">{error}</p>
-                <button
-                  onClick={handleReset}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.08)] text-white font-medium hover:bg-[rgba(255,255,255,0.12)] transition-all duration-300 cursor-pointer"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  <span>再来一次</span>
-                </button>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <button
+                    onClick={() => handleAnalyze()}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-medium hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>重试分析</span>
+                  </button>
+                  <button
+                    onClick={handleReset}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.08)] text-white font-medium hover:bg-[rgba(255,255,255,0.12)] transition-all duration-300 cursor-pointer"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    <span>重新开始</span>
+                  </button>
+                </div>
               </div>
             </div>
           ) : null}

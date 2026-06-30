@@ -211,7 +211,7 @@ function DeleteConfirmPanel({
         className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm cursor-pointer"
         onClick={onCancel}
       />
-      <div className="fixed bottom-0 left-0 right-0 z-50 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-w-sm sm:rounded-2xl animate-slide-up">
+      <div className="fixed bottom-0 left-0 right-0 z-50 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-w-sm sm:rounded-2xl animate-slide-up safe-bottom">
         <div className="bg-[#1a1530] sm:border border-[rgba(255,255,255,0.1)] rounded-t-2xl sm:rounded-2xl p-6">
           <h3 className="text-white font-semibold text-base mb-2">{message || "确定删除这条决策记录吗？"}</h3>
           <p className="text-[rgba(255,255,255,0.5)] text-sm mb-6">删除后无法恢复</p>
@@ -236,7 +236,7 @@ function DeleteConfirmPanel({
 }
 
 // Decision Card
-function DecisionCard({ record, onDelete }: { record: DecisionRecord; onDelete: () => void }) {
+function DecisionCard({ record, onDelete, onRateChange }: { record: DecisionRecord; onDelete: () => void; onRateChange?: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -256,6 +256,7 @@ function DecisionCard({ record, onDelete }: { record: DecisionRecord; onDelete: 
     setRatingAnimation(score);
     setTimeout(() => setRatingAnimation(null), 300);
     showToast("感谢你的反馈！", "success", 2000);
+    onRateChange?.();
   };
 
   const handleDelete = () => {
@@ -683,7 +684,13 @@ export default function HistoryPage() {
       ) : searchQuery.trim() && grouped.length === 0 ? (
         <div className="max-w-[640px] mx-auto py-16 text-center animate-fade-in-up">
           <Search className="w-10 h-10 text-[rgba(255,255,255,0.2)] mx-auto mb-3" />
-          <p className="text-[rgba(255,255,255,0.5)] text-sm">没有找到匹配的决策</p>
+          <p className="text-[rgba(255,255,255,0.5)] text-sm mb-4">没有找到匹配的决策</p>
+          <button
+            onClick={() => setSearchQuery("")}
+            className="text-xs text-[rgba(255,255,255,0.4)] hover:text-white underline underline-offset-2 transition-colors cursor-pointer"
+          >
+            清除搜索
+          </button>
         </div>
       ) : (
         <div className="max-w-[640px] mx-auto space-y-6">
@@ -696,7 +703,7 @@ export default function HistoryPage() {
               {/* Cards */}
               <div className="space-y-3">
                 {items.map((record) => (
-                  <DecisionCard key={record.id} record={record} onDelete={refresh} />
+                  <DecisionCard key={record.id} record={record} onDelete={refresh} onRateChange={refresh} />
                 ))}
               </div>
             </div>

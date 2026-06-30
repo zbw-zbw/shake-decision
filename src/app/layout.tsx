@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Noto_Sans_SC } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
@@ -19,6 +19,14 @@ const notoSansSC = Noto_Sans_SC({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  themeColor: "#0f0b1a",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+};
+
 export const metadata: Metadata = {
   title: {
     default: "摇一摇决策器 — 选择困难？摇一下就好",
@@ -31,6 +39,9 @@ export const metadata: Metadata = {
     title: "摇一摇决策器 — 选择困难？摇一下就好",
     description: "摇晃手机，AI帮你终结选择困难症",
     type: "website",
+    url: "https://shake-decision.vercel.app",
+    siteName: "摇一摇决策器",
+    images: [{ url: "/favicon.png", width: 256, height: 256 }],
   },
 };
 
