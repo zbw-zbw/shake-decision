@@ -62,7 +62,7 @@ export function Navbar() {
                 href={link.href}
                 className={`text-sm transition-colors hover:text-white relative cursor-pointer ${
                   pathname === link.href
-                    ? "text-white font-medium"
+                    ? "text-white font-medium border-b-2 border-[#818cf8] pb-0.5"
                     : "text-[rgba(255,255,255,0.7)]"
                 }`}
               >
@@ -116,7 +116,7 @@ export function Navbar() {
               href={link.href}
               className={`text-2xl font-medium transition-colors hover:text-white relative cursor-pointer ${
                 pathname === link.href
-                  ? "text-white"
+                  ? "text-white border-b-2 border-[#818cf8] pb-1"
                   : "text-[rgba(255,255,255,0.6)]"
               }`}
               onClick={() => setMenuOpen(false)}

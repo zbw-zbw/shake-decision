@@ -17,7 +17,7 @@ import {
   Check, Clock, Lightbulb, Search, BarChart3, Zap, CheckCircle2,
   MessageSquare, Flame, ArrowRight, Target, X, Heart, Star, TrendingUp, BookOpen,
   Utensils, ShoppingBag, Home, Briefcase, Book, Car, Dumbbell, Plane, Moon,
-  Volume2, VolumeX, Maximize, Minimize, Trash2,
+  Volume2, VolumeX, Maximize, Minimize, Trash2, ChevronUp,
 } from "lucide-react";
 import {
   setSoundEnabled,
@@ -206,6 +206,14 @@ function DecisionInputForm({
   const [optionB, setOptionB] = useState(initialValues?.optionB ?? "");
   const [errors, setErrors] = useState<{ dilemma?: string; optionA?: string; optionB?: string }>({});
   const [flashField, setFlashField] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const autoResize = () => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = Math.min(el.scrollHeight, 200) + "px";
+    }
+  };
 
   const validate = useCallback(() => {
     const nextErrors: typeof errors = {};
@@ -282,6 +290,8 @@ function DecisionInputForm({
             </label>
             <div className="relative">
               <textarea
+                ref={textareaRef}
+                onInput={autoResize}
                 value={dilemma}
                 onChange={(e) => {
                   if (e.target.value.length <= 200) setDilemma(e.target.value);
@@ -617,7 +627,7 @@ function ShakeInterface({
       };
       onReport(stats);
       onAnalyze(stats);
-    }, 800);
+    }, 1500);
     return () => clearTimeout(t);
   }, [shakingPhase]);
 
@@ -918,7 +928,7 @@ function ShakeInterface({
               disabled
               className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-semibold transition-all duration-300 cursor-not-allowed flex items-center justify-center gap-2"
             >
-              <span>正在分析...</span>
+              <span>正在生成报告...</span>
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             </button>
           </div>
@@ -1022,6 +1032,9 @@ function ResultPhase({
   const [copied, setCopied] = useState(false);
   const [alternativeLoading, setAlternativeLoading] = useState(false);
   const [decisionCount, setDecisionCount] = useState<number | null>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [rootCausesExpanded, setRootCausesExpanded] = useState(false);
+  const [suggestionsExpanded, setSuggestionsExpanded] = useState(false);
   const { showToast } = useToast();
   const { triggerConfetti } = useConfetti();
 
@@ -1044,6 +1057,16 @@ function ResultPhase({
     } catch {
       // ignore
     }
+  }, []);
+
+  // Show scroll-to-top button when scrolled past 300px
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 300);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const handleShare = async () => {
@@ -1176,6 +1199,17 @@ function ResultPhase({
   return (
     <div className="safe-bottom relative w-full min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center px-4 py-20">
 
+      {/* Scroll to top FAB */}
+      {showScrollTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          aria-label="回到顶部"
+          className="fixed bottom-6 right-6 z-30 w-10 h-10 rounded-full bg-[rgba(79,70,229,0.3)] backdrop-blur-sm border border-[rgba(255,255,255,0.1)] flex items-center justify-center cursor-pointer hover:bg-[rgba(79,70,229,0.5)] transition-all"
+        >
+          <ChevronUp className="w-5 h-5 text-white" />
+        </button>
+      )}
+
       <div className="w-full max-w-[560px] mx-auto animate-fade-in-up">
         <div className="bg-[rgba(255,255,255,0.06)] backdrop-blur-sm border border-[rgba(255,255,255,0.08)] rounded-2xl overflow-hidden">
           {/* Header */}
@@ -1208,6 +1242,11 @@ function ResultPhase({
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* Dilemma echo */}
+          <div className="px-6 sm:px-8">
+            <p className="text-sm text-[rgba(255,255,255,0.5)] mb-4">「{dilemma}」</p>
           </div>
 
           {decisionCount !== null && (
@@ -1361,7 +1400,10 @@ function ResultPhase({
                 <span>纠结根因分析</span>
               </h3>
               <ul className="space-y-3">
-                {result.rootCauses.map((cause, i) => (
+                {(rootCausesExpanded || result.rootCauses.length <= 2
+                  ? result.rootCauses
+                  : result.rootCauses.slice(0, 2)
+                ).map((cause, i) => (
                   <li
                     key={i}
                     className="flex items-start gap-2.5 text-sm text-[rgba(255,255,255,0.7)] leading-relaxed animate-fade-in-up"
@@ -1372,6 +1414,14 @@ function ResultPhase({
                   </li>
                 ))}
               </ul>
+              {result.rootCauses.length > 2 && (
+                <button
+                  onClick={() => setRootCausesExpanded((v) => !v)}
+                  className="mt-3 text-xs text-[#818cf8] hover:text-[#a5b4fc] transition-colors cursor-pointer"
+                >
+                  {rootCausesExpanded ? "收起" : "展开全部"}
+                </button>
+              )}
             </div>
 
             {/* Suggestions */}
@@ -1381,7 +1431,10 @@ function ResultPhase({
                 <span>决策建议</span>
               </h3>
               <div className="space-y-2">
-                {result.suggestions.map((s, i) => (
+                {(suggestionsExpanded || result.suggestions.length <= 2
+                  ? result.suggestions
+                  : result.suggestions.slice(0, 2)
+                ).map((s, i) => (
                   <div
                     key={i}
                     className="flex items-start gap-3 bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.06)] rounded-xl px-4 py-3 animate-fade-in-up"
@@ -1392,6 +1445,14 @@ function ResultPhase({
                   </div>
                 ))}
               </div>
+              {result.suggestions.length > 2 && (
+                <button
+                  onClick={() => setSuggestionsExpanded((v) => !v)}
+                  className="mt-3 text-xs text-[#818cf8] hover:text-[#a5b4fc] transition-colors cursor-pointer"
+                >
+                  {suggestionsExpanded ? "收起" : "展开全部"}
+                </button>
+              )}
             </div>
 
             {/* Tangle Analysis */}

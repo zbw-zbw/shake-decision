@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Smartphone } from "lucide-react";
+import { Smartphone, ChevronDown } from "lucide-react";
 
 export function HeroSection() {
   return (
@@ -54,6 +54,12 @@ export function HeroSection() {
             <span className="text-sm font-medium">摇一摇</span>
           </Link>
         </div>
+
+        {/* CTA guidance */}
+        <p className="fade-in text-sm text-[rgba(255,255,255,0.5)] mb-4" style={{ animationDelay: "0.6s" }}>
+          点击立即开始 · 免费无需登录
+        </p>
+        <ChevronDown className="fade-in w-6 h-6 text-[rgba(255,255,255,0.4)] animate-bounce mx-auto" style={{ animationDelay: "0.7s" }} />
       </div>
     </section>
   );
